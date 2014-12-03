@@ -1,5 +1,7 @@
 GGD. Test
 
+Note: recipes for datasets retrieved from https://github.com/arq5x/ggd-recipes
+
 Examples:
 
 	# get CpG islands for human build 37 from UCSC 
