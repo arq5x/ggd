@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import requests
+import urllib2
 import subprocess
 
 recipe_urls = {
@@ -37,7 +38,11 @@ def _run_recipe(recipe, outfile):
   ret = subprocess.call(['bash', recipe], stdout=f)
   return ret
 
+
 def install(parser, args):
+  """
+  Install a dataset based on a GGD recipe
+  """
   # replace "." in recipe with slashes
   recipe = args.recipe.replace('.', '/')
 
@@ -54,12 +59,17 @@ def install(parser, args):
       print >> sys.stderr, "installed " + args.recipe + " as " + outfile
     else:
       print >> sys.stderr, "failure installing " + args.recipe
-    os.remove(recipe_file)
+    #os.remove(recipe_file)
   else:
     print >> sys.stderr, "exiting."
 
+
 def list(parser, args):
+  """
+  List a available datasets
+  """
   pass
+
 
 def main():
 
@@ -70,7 +80,7 @@ def main():
                       version="alpha")
   subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
-  # create the individual tool parsers
+  # parser for install tool
   parser_install = subparsers.add_parser('install', 
     help='Install a dataset based on a recipe')
   parser_install.add_argument('recipe', 
@@ -82,6 +92,11 @@ def main():
     required=False,
     help='The name of the output file.')
   parser_install.set_defaults(func=install)
+
+  # parser for list tool
+  parser_list = subparsers.add_parser('list', 
+    help='List available recipes')
+  parser_list.set_defaults(func=list)
 
   # parse the args and call the selected function
   args = parser.parse_args()
