@@ -6,37 +6,78 @@ import argparse
 import requests
 import urllib2
 import subprocess
+import yaml
 
 recipe_urls = {
   "core": "https://raw.githubusercontent.com/arq5x/ggd-recipes/master/",
   }
 
 
-def _download_file(args, url):
+def _get_recipe(args, url):
   """
   http://stackoverflow.com/questions/16694907/\
   how-to-download-large-file-in-python-with-requests-py
   """
   local_filename = url.split('/')[-1]
-  print >> sys.stderr, "searcing for recipe: " + args.recipe
-  r = requests.get(url, stream=True)
-  if r.status_code == 200:
-    print >> sys.stderr, "found recipe: " + args.recipe
-    with open(local_filename, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024): 
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
-                f.flush()
-    return local_filename
+  print >> sys.stderr, "searching for recipe: " + args.recipe
+
+  # hanndle core URL and http:// and ftp:// based cookbooks
+  if args.cookbook is None or "file://" not in args.cookbook:
+    r = requests.get(url, stream=True)
+    if r.status_code == 200:
+      print >> sys.stderr, "found recipe: " + args.recipe
+      return r.text
+    else:
+      print >> sys.stderr, "could not find recipe: " + args.recipe
+      return None
+  #responses library doesn't support file:// requests
+  else: 
+    r = urllib2.urlopen(url)
+    if r.getcode() is None:
+      print >> sys.stderr, "found recipe: " + args.recipe
+      return r.read()
+    else:
+      print >> sys.stderr, "could not find recipe: " + args.recipe
+      return None
+
+
+
+def _run_recipe(args, recipe):
+  """
+  Execute the contents of a recipe.
+  """
+
+  if args.region is None:
+    # bash, etc.
+    recipe_type = recipe['recipe']['full']['recipe_type']
+    # specific commnads to execute recipe.
+    recipe_cmds = recipe['recipe']['full']['recipe_cmds']
+    # the output file names for the recipe.
+    recipe_outfiles = recipe['recipe']['full']['recipe_outfiles']
   else:
-    print >> sys.stderr, "could not find recipe: " + args.recipe
-    return None
+    if 'region' in recipe['recipe']:
+      # bash, etc.
+      recipe_type = recipe['recipe']['region']['recipe_type']
+      # specific commnads to execute recipe.
+      recipe_cmds = recipe['recipe']['region']['recipe_cmds']
+      # the output file names for the recipe.
+      recipe_outfiles = recipe['recipe']['region']['recipe_outfiles']
+    else:
+      print >> sys.stderr, "region queries not supported for " + args.recipe
 
+  for idx, cmd in enumerate(recipe_cmds):
+    f = open(recipe_outfiles[idx], 'w')
+    if recipe_type == 'bash':
+      if args.region is not None:
+        cmd += ' ' + args.region
+      ret = subprocess.call(cmd, stdout=f, shell=True)
+      if ret: # return non-zero if failure
+        print >> sys.stderr, "failure installing " + args.recipe
+    else:
+      print >> sys.stderr, "recipe_type not yet supported"
+    f.close()
 
-def _run_recipe(recipe, outfile):
-  f = open(outfile, 'w')
-  ret = subprocess.call(['bash', recipe], stdout=f)
-  return ret
+  return True
 
 
 def install(parser, args):
@@ -46,20 +87,21 @@ def install(parser, args):
   # replace "." in recipe with slashes
   recipe = args.recipe.replace('.', '/')
 
-  recipe_url = recipe_urls['core'] + recipe + '.sh'
-  recipe_file = _download_file(args, recipe_url)
+  if args.cookbook is None:
+    recipe_url = recipe_urls['core'] + recipe + '.yaml'
+  else:
+    recipe_url = args.cookbook + recipe + '.yaml'
 
-  if recipe_file is not None:
-    outfile = args.outfile 
-    if outfile is None:
-      outfile = args.recipe
+  # get the raw YAML string contents of the recipe
+  recipe = _get_recipe(args, recipe_url)
 
-    failure = _run_recipe(recipe_file, outfile)
-    if not failure:
-      print >> sys.stderr, "installed " + args.recipe + " as " + outfile
+  if recipe is not None:
+    # convert YAML to a dictionary
+    recipe_dict = yaml.load(recipe)
+    if _run_recipe(args, recipe_dict):
+      print >> sys.stderr, "installed " + args.recipe
     else:
       print >> sys.stderr, "failure installing " + args.recipe
-    #os.remove(recipe_file)
   else:
     print >> sys.stderr, "exiting."
 
@@ -86,11 +128,17 @@ def main():
   parser_install.add_argument('recipe', 
     metavar='STRING',
     help='The GGD recipe to use.')
-  parser_install.add_argument('-o',
-    dest='outfile',
+  parser_install.add_argument('--region',
+    dest='region',
     metavar='STRING',
     required=False,
-    help='The name of the output file.')
+    help='A genomic region to extract. E.g., chr1:100-200')
+  parser_install.add_argument('--cookbook',
+    dest='cookbook',
+    metavar='STRING',
+    required=False,
+    help='A URL to an alternative collection of ' 
+    'recipes that follow the GGD ontology')
   parser_install.set_defaults(func=install)
 
   # parser for list tool
