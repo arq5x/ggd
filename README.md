@@ -69,5 +69,6 @@ We will try to minimize these as much as possible.
 
 1. Mysql
 2. Curl
-3. Python 2.7
-4. Tabix
+3. pyyaml
+4. Python 2.7
+5. Tabix
