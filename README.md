@@ -18,7 +18,7 @@ Get CpG islands for human build 37 from UCSC
     $ ls -1
     ucsc.human.b37.cpg
 
-Get CpG islands for human build 38 from UCSC and rename file
+Get CpG islands for human build 38 from UCSC
 
 	$ python ggd.py install ucsc.human.b38.cpg
     searching for recipe: ucsc.human.b38.cpg
