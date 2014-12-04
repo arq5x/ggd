@@ -52,6 +52,17 @@ Get Clinvar VCF and Tabix index for human build 37 from NCBI
 	clinvar-latest.vcf.gz
 	clinvar-latest.vcf.gz.tbi
 
+Get a specific genomic region from Clinvar VCF via Tabix for human build 37 from NCBI
+
+	$ python ggd.py install ncbi.human.b37.clinvar \
+	         --region 22:20000000-30000000
+	ucsc.human.b37.cpg
+    ucsc.human.b38.cpg
+	clinvar-latest.region.vcf
+	clinvar-latest.vcf.gz
+	clinvar-latest.vcf.gz.tbi
+	$ ls -1
+
 
 Get ExAC VCF and Tabix index for human build 37 from ExAC website (slower)
 
@@ -61,8 +72,9 @@ Get ExAC VCF and Tabix index for human build 37 from ExAC website (slower)
     installed misc.human.b37.exac
 
     $ ls -1
-    ucsc.human.b37.cpg
+	ucsc.human.b37.cpg
     ucsc.human.b38.cpg
+	clinvar-latest.region.vcf
 	clinvar-latest.vcf.gz
 	clinvar-latest.vcf.gz.tbi
     ExAC.r0.2.sites.vep.vcf.gz
