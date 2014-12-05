@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import argparse
-import requests
-import urllib2
-import re
 import json
+import re
+import requests
 import subprocess
+import sys
+import urllib2
 import yaml
 
 recipe_urls = {
   "core": "https://raw.githubusercontent.com/arq5x/ggd-recipes/master/",
+  "api": "https://api.github.com/repos/arq5x/ggd-recipes/git/trees/master?recursive=1"
   }
 
 
@@ -20,7 +20,6 @@ def _get_recipe(args, url):
   http://stackoverflow.com/questions/16694907/\
   how-to-download-large-file-in-python-with-requests-py
   """
-  local_filename = url.split('/')[-1]
   print >> sys.stderr, "searching for recipe: " + args.recipe
 
   # hanndle core URL and http:// and ftp:// based cookbooks
@@ -33,7 +32,7 @@ def _get_recipe(args, url):
       print >> sys.stderr, "could not find recipe: " + args.recipe
       return None
   #responses library doesn't support file:// requests
-  else: 
+  else:
     r = urllib2.urlopen(url)
     if r.getcode() is None:
       print >> sys.stderr, "found recipe: " + args.recipe
@@ -110,9 +109,28 @@ def install(parser, args):
 
 def list(parser, args):
   """
-  List a available datasets
+  List all available datasets
   """
-  pass
+  request = requests.get(recipe_urls['api'])
+  tree = request.json()['tree']
+  for branch in tree:
+    if ".yaml" in branch["path"]:
+      print branch['path'].rstrip('.yaml')
+
+
+def search(parser, args):
+    """
+    Search for a recipe
+    """
+    recipe = args.recipe
+    request = requests.get(recipe_urls['api'])
+    tree = request.json()['tree']
+    matches = [branch['path'] for branch in tree if recipe in branch['path'] and ".yaml" in branch["path"]]
+    if matches:
+        print "Available recipes:"
+        print "\n".join(match.rstrip('.yaml') for match in matches)
+    else:
+        print >> sys.stderr, "No recipes available for {}".format(recipe)
 
 
 def main():
@@ -125,9 +143,9 @@ def main():
   subparsers = parser.add_subparsers(title='[sub-commands]', dest='command')
 
   # parser for install tool
-  parser_install = subparsers.add_parser('install', 
+  parser_install = subparsers.add_parser('install',
     help='Install a dataset based on a recipe')
-  parser_install.add_argument('recipe', 
+  parser_install.add_argument('recipe',
     metavar='STRING',
     help='The GGD recipe to use.')
   parser_install.add_argument('--region',
@@ -139,14 +157,21 @@ def main():
     dest='cookbook',
     metavar='STRING',
     required=False,
-    help='A URL to an alternative collection of ' 
+    help='A URL to an alternative collection of '
     'recipes that follow the GGD ontology')
   parser_install.set_defaults(func=install)
 
   # parser for list tool
-  parser_list = subparsers.add_parser('list', 
+  parser_list = subparsers.add_parser('list',
     help='List available recipes')
   parser_list.set_defaults(func=list)
+
+  parser_search = subparsers.add_parser('search',
+    help='Search available recipes')
+  parser_search.add_argument('recipe',
+    metavar='STRING',
+    help='The GGD recipe to search.')
+  parser_search.set_defaults(func=search)
 
   # parse the args and call the selected function
   args = parser.parse_args()
