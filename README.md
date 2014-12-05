@@ -28,7 +28,7 @@ Examples
 
 Get CpG islands for human build 37 from UCSC 
 
-	$ ggd install ucsc.human.b37.cpg
+	$ ggd install ucsc/human/b37/cpg
     searching for recipe: ucsc/human/b37/cpg
     found recipe: ucsc/human/b37/cpg
     installed ucsc/human/b37/cpg
