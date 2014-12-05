@@ -7,7 +7,7 @@ The recipes for datasets retrieved from https://github.com/arq5x/ggd-recipes
 
 The recipes follow an ontology. For example, one could use GGD to install CpG islands from UCSC for Human build 38.  The command would be:
 
-	# source.species.genomebuild.name
+	# Recipe hierarchy: source/species/genomebuild/name
 	ggd install ucsc/human/b38/cpg
 
 In this case, the recipe would live at:
