@@ -1,0 +1,5 @@
+#!/usr/bin/python -E
+
+import ggd.scripts
+import ggd.ggd
+ggd.ggd.main()
