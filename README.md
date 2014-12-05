@@ -94,6 +94,23 @@ Try to install a recipe that doesn't exist (nearly everything)
     could not find recipe: ucsc.human.b38.dbsnp
     exiting.
 
+Search for recipes
+	
+	$ ggd search cpg
+	Available recipes:
+	ucsc/human/b37/cpg
+	ucsc/human/b38/cpg
+
+List all recipes (currently very few)
+
+	$ ggd list
+	misc/human/b37/exac
+	ncbi/human/b37/clinvar
+	ucsc/human/b37/alus
+	ucsc/human/b37/cpg
+	ucsc/human/b38/cpg
+	...
+
 
 Dependencies
 ============
