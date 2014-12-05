@@ -85,8 +85,7 @@ def install(parser, args):
   """
   Install a dataset based on a GGD recipe
   """
-  # replace "." in recipe with slashes
-  recipe = args.recipe.replace('.', '/')
+  recipe = args.recipe
 
   if args.cookbook is None:
     recipe_url = recipe_urls['core'] + recipe + '.yaml'
