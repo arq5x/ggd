@@ -19,7 +19,7 @@ recipe_urls = {
 def get_install_path(config_path):
   if config_path is None:
     config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                          'config.yml')
+                          'config.yaml')
   with open(config_path, 'r') as f:
     config = yaml.load(f.read())
   return config['path']['root']
@@ -28,7 +28,7 @@ def get_install_path(config_path):
 def set_install_path(data_path, config_path):
   if config_path is None:
     config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                          'config.yml')
+                          'config.yaml')
   # load the existing config
   with open(config_path, 'r') as f:
     config = yaml.load(f.read())
