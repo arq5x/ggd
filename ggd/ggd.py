@@ -1,19 +1,28 @@
 #!/usr/bin/env python
 
 import argparse
-import json
-import re
+import os
 import requests
+import shutil
 import subprocess
 import sys
+import tempfile
 import urllib2
 import yaml
+
 
 recipe_urls = {
   "core": "https://raw.githubusercontent.com/arq5x/ggd-recipes/master/",
   "api": "https://api.github.com/repos/arq5x/ggd-recipes/git/trees/master?recursive=1"
   }
 
+def get_install_path(config_path):
+    if config_path is None:
+        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            'config.yml')
+    with open(config_path, 'r') as f:
+        config = yaml.load(f.read())
+    return config['path']['root']
 
 def _get_recipe(args, url):
   """
@@ -50,6 +59,7 @@ def _run_recipe(args, recipe):
 
   if args.region is None:
     # bash, etc.
+    recipe_version = recipe['attributes']['version']
     recipe_type = recipe['recipe']['full']['recipe_type']
     # specific commnads to execute recipe.
     recipe_cmds = recipe['recipe']['full']['recipe_cmds']
@@ -66,18 +76,25 @@ def _run_recipe(args, recipe):
     else:
       print >> sys.stderr, "region queries not supported for " + args.recipe
 
+  tempdir = tempfile.mkdtemp()
+  install_path = get_install_path(args.config)
   for idx, cmd in enumerate(recipe_cmds):
-    f = open(recipe_outfiles[idx], 'w')
+    out_file = os.path.join(tempdir, recipe_outfiles[idx])
+    f = open(out_file, 'w')
     if recipe_type == 'bash':
       if args.region is not None:
         cmd += ' ' + args.region
+      destination = os.path.join(install_path, args.recipe, str(recipe_version))
       ret = subprocess.call(cmd, stdout=f, shell=True)
       if ret: # return non-zero if failure
-        print >> sys.stderr, "failure installing " + args.recipe
+          print >> sys.stderr, "failure installing " + args.recipe
     else:
       print >> sys.stderr, "recipe_type not yet supported"
     f.close()
-
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+    shutil.move(out_file, destination)
+  shutil.rmtree(tempdir)
   return True
 
 
@@ -158,6 +175,11 @@ def main():
     required=False,
     help='A URL to an alternative collection of '
     'recipes that follow the GGD ontology')
+  parser_install.add_argument('--config',
+    dest='config',
+    metavar='STRING',
+    required=False,
+    help='Absolute location to config file')
   parser_install.set_defaults(func=install)
 
   # parser for list tool
