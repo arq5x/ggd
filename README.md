@@ -23,8 +23,10 @@ Installation
     sudo python setup.py install
 
 
-Examples
-========
+Example usage
+=============
+
+GGD uses a configuration file ('config.yaml') to control where the datasets that it installs are placed on your file system. By default, this will be $HOME/ggd_data. 
 
 Get CpG islands for human build 37 from UCSC 
 
@@ -33,18 +35,22 @@ Get CpG islands for human build 37 from UCSC
     found recipe: ucsc/human/b37/cpg
     installed ucsc/human/b37/cpg
 
-    $ ls -1
+    $ ls -1 $HOME/ggd_data
     ucsc.human.b37.cpg
 
-Get CpG islands for human build 38 from UCSC
+If you would the datasets to be placed somewhere else, one can change the path that is used with the `setpath` tool.
+
+	$ ggd setpath --path ~/mydata/
+
+
+Now get CpG islands for human build 38 from UCSC. Note that the location of the dataset has changed to ~/mydata/
 
 	$ ggd install ucsc/human/b38/cpg
     searching for recipe: ucsc/human/b38/cpg
     found recipe: ucsc/human/b38/cpg
     installed ucsc/human/b38/cpg
 
-    $ ls -1
-    ucsc.human.b37.cpg
+    $ ls -1 ~/mydata/
     ucsc.human.b38.cpg
 
 Get Clinvar VCF and Tabix index for human build 37 from NCBI
@@ -54,8 +60,7 @@ Get Clinvar VCF and Tabix index for human build 37 from NCBI
     found recipe: ncbi/human/b37/clinvar
     installed ncbi/human/b37/clinvar
 
-    $ ls -1
-    ucsc.human.b37.cpg
+    $ ls -1 ~/mydata/
     ucsc.human.b38.cpg
 	clinvar-latest.vcf.gz
 	clinvar-latest.vcf.gz.tbi
@@ -65,8 +70,7 @@ Get a specific genomic region from Clinvar VCF via Tabix for human build 37 from
 	$ ggd install ncbi.human.b37.clinvar \
 	         --region 22:20000000-30000000
 
-	$ ls -1
-	ucsc.human.b37.cpg
+	$ ls -1 ~/mydata/
     ucsc.human.b38.cpg
 	clinvar-latest.region.vcf
 	clinvar-latest.vcf/gz
@@ -79,8 +83,7 @@ Get ExAC VCF and Tabix index for human build 37 from ExAC website (slower)
     found recipe: misc/human/b37/exac
     installed misc/human/b37/exac
 
-    $ ls -1
-	ucsc.human.b37.cpg
+    $ ls -1 ~/mydata/
     ucsc.human.b38.cpg
 	clinvar-latest.region.vcf
 	clinvar-latest.vcf.gz
