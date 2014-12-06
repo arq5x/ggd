@@ -17,12 +17,29 @@ recipe_urls = {
   }
 
 def get_install_path(config_path):
-    if config_path is None:
-        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            'config.yml')
-    with open(config_path, 'r') as f:
-        config = yaml.load(f.read())
-    return config['path']['root']
+  if config_path is None:
+    config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                          'config.yml')
+  with open(config_path, 'r') as f:
+    config = yaml.load(f.read())
+  return config['path']['root']
+
+
+def set_install_path(data_path, config_path):
+  if config_path is None:
+    config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                          'config.yml')
+  # load the existing config
+  with open(config_path, 'r') as f:
+    config = yaml.load(f.read())
+  f.close()
+
+  # change the data path and update the config file
+  config['path']['root'] = data_path
+  with open(config_path, 'w') as f:
+    f.write(yaml.dump(config, default_flow_style=False))
+  f.close()
+
 
 def _get_recipe(args, url):
   """
@@ -76,25 +93,24 @@ def _run_recipe(args, recipe):
     else:
       print >> sys.stderr, "region queries not supported for " + args.recipe
 
-  tempdir = tempfile.mkdtemp()
-  install_path = get_install_path(args.config)
+  # use os.path.expanduser to expand $HOME, etc.
+  install_path = os.path.expandvars(get_install_path(args.config))
+  if not os.path.exists(install_path):
+    os.makedirs(install_path)
+
   for idx, cmd in enumerate(recipe_cmds):
-    out_file = os.path.join(tempdir, recipe_outfiles[idx])
+    out_file = os.path.join(install_path, recipe_outfiles[idx])
     f = open(out_file, 'w')
     if recipe_type == 'bash':
       if args.region is not None:
         cmd += ' ' + args.region
-      destination = os.path.join(install_path, args.recipe, str(recipe_version))
       ret = subprocess.call(cmd, stdout=f, shell=True)
       if ret: # return non-zero if failure
           print >> sys.stderr, "failure installing " + args.recipe
     else:
       print >> sys.stderr, "recipe_type not yet supported"
     f.close()
-    if not os.path.exists(destination):
-        os.makedirs(destination)
-    shutil.move(out_file, destination)
-  shutil.rmtree(tempdir)
+
   return True
 
 
@@ -123,7 +139,7 @@ def install(parser, args):
     print >> sys.stderr, "exiting."
 
 
-def list(parser, args):
+def list_recipes(parser, args):
   """
   List all available datasets
   """
@@ -134,7 +150,7 @@ def list(parser, args):
       print branch['path'].rstrip('.yaml')
 
 
-def search(parser, args):
+def search_recipes(parser, args):
     """
     Search for a recipe
     """
@@ -147,6 +163,13 @@ def search(parser, args):
         print "\n".join(match.rstrip('.yaml') for match in matches)
     else:
         print >> sys.stderr, "No recipes available for {}".format(recipe)
+
+
+def setpath(parser, args):
+  """
+  Set the path to use for storing installed recipes
+  """
+  set_install_path(args.path, args.config)
 
 
 def main():
@@ -185,14 +208,29 @@ def main():
   # parser for list tool
   parser_list = subparsers.add_parser('list',
     help='List available recipes')
-  parser_list.set_defaults(func=list)
+  parser_list.set_defaults(func=list_recipes)
 
+  # parser for search tool
   parser_search = subparsers.add_parser('search',
     help='Search available recipes')
   parser_search.add_argument('recipe',
     metavar='STRING',
     help='The GGD recipe to search.')
-  parser_search.set_defaults(func=search)
+  parser_search.set_defaults(func=search_recipes)
+
+  # parser for setpath tool
+  parser_setpath = subparsers.add_parser('setpath',
+    help='Set the path to which datasets should be installed.')
+  parser_setpath.add_argument('--path',
+    dest='path',
+    metavar='STRING',
+    help='The data path to use.')
+  parser_setpath.add_argument('--config',
+    dest='config',
+    metavar='STRING',
+    required=False,
+    help='Absolute location to config file')
+  parser_setpath.set_defaults(func=setpath)
 
   # parse the args and call the selected function
   args = parser.parse_args()
