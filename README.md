@@ -14,6 +14,8 @@ In this case, the recipe would live at:
 
 	https://github.com/arq5x/ggd-recipes/ucsc/human/b38/cpg.yaml
 
+Overview of the GDD design:
+
 ![overview](https://raw.githubusercontent.com/arq5x/ggd/master/_images/overview.png)
 
 
