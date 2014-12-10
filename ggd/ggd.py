@@ -111,7 +111,7 @@ def _run_recipe(args, recipe):
   # bash, etc.
   recipe_version = recipe['attributes'].get('version')
   # used to validate the correctness of the dataset
-  recipe_sha1s = [recipe['attributes'].get('sha1')]
+  recipe_sha1s = recipe['attributes'].get('sha1')
 
   if args.region is None:
     recipe_type = recipe['recipe']['full']['recipe_type']
@@ -148,8 +148,12 @@ def _run_recipe(args, recipe):
       print >> sys.stderr, "recipe_type not yet supported"
     f.close()
 
-    recipe_sha1 = recipe_sha1s[idx]
-    if recipe_sha1 is not None:
+    if isinstance(recipe_sha1s, list):
+      recipe_sha1 = recipe_sha1s[idx]
+    else:
+      recipe_sha1 = recipe_sha1s
+
+    if recipe_sha1 is not None and args.region is None:
       # validate the SHA1 checksum
       print >> sys.stderr, \
         "validating dataset SHA1 checksum for " + out_file + "...",
