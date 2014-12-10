@@ -9,6 +9,7 @@ import sys
 import tempfile
 import urllib2
 import yaml
+import hashlib
 
 
 recipe_urls = {
@@ -25,6 +26,20 @@ def _get_config_data(config_path):
     config = yaml.load(f.read())
   f.close()
   return config
+
+def _get_sha1_checksum(filename, blocksize=65536):
+  """
+  Return the SHA1 checksum for a dataset.
+  http://stackoverflow.com/questions/3431825/generating-a-md5-checksum-of-a-file
+  """
+  hasher = hashlib.sha1()
+  f = open(filename, 'rb')
+  buf = f.read(blocksize)
+  while len(buf) > 0:
+    hasher.update(buf)
+    buf = f.read(blocksize)
+  return hasher.hexdigest()
+
 
 def get_install_path(config_path):
   """
@@ -65,25 +80,25 @@ def _get_recipe(args, url):
   http://stackoverflow.com/questions/16694907/\
   how-to-download-large-file-in-python-with-requests-py
   """
-  print >> sys.stderr, "searching for recipe: " + args.recipe
+  print >> sys.stderr, "searching for recipe: " + args.recipe + "...",
 
   # hanndle core URL and http:// and ftp:// based cookbooks
   if args.cookbook is None or "file://" not in args.cookbook:
     r = requests.get(url, stream=True)
     if r.status_code == 200:
-      print >> sys.stderr, "found recipe: " + args.recipe
+      print >> sys.stderr, "ok"
       return r.text
     else:
-      print >> sys.stderr, "could not find recipe: " + args.recipe
+      print >> sys.stderr, "failed"
       return None
   #responses library doesn't support file:// requests
   else:
     r = urllib2.urlopen(url)
     if r.getcode() is None:
-      print >> sys.stderr, "found recipe: " + args.recipe
+      print >> sys.stderr, "ok"
       return r.read()
     else:
-      print >> sys.stderr, "could not find recipe: " + args.recipe
+      print >> sys.stderr, "failed"
       return None
 
 
@@ -93,9 +108,12 @@ def _run_recipe(args, recipe):
   Execute the contents of a YAML-structured recipe.
   """
 
+  # bash, etc.
+  recipe_version = recipe['attributes'].get('version')
+  # used to validate the correctness of the dataset
+  recipe_sha1s = recipe['attributes'].get('sha1')
+
   if args.region is None:
-    # bash, etc.
-    recipe_version = recipe['attributes']['version']
     recipe_type = recipe['recipe']['full']['recipe_type']
     # specific commnads to execute recipe.
     recipe_cmds = recipe['recipe']['full']['recipe_cmds']
@@ -129,6 +147,19 @@ def _run_recipe(args, recipe):
     else:
       print >> sys.stderr, "recipe_type not yet supported"
     f.close()
+
+    recipe_sha1 = recipe_sha1s[idx]
+    if recipe_sha1 is not None:
+      # validate the SHA1 checksum
+      print >> sys.stderr, \
+        "validating dataset SHA1 checksum for " + out_file + "...",
+      observed_sha1 = _get_sha1_checksum(out_file)
+      if observed_sha1 == recipe_sha1:
+        print >> sys.stderr, "ok (" + observed_sha1 + ")"
+      else:
+        print >> sys.stderr, "failed."
+        print >> sys.stderr, "failure installing " + args.recipe + "."
+        print >> sys.stderr, "perhaps the connection was disrupted? try again?"
 
   return True
 
