@@ -16,29 +16,48 @@ recipe_urls = {
   "api": "https://api.github.com/repos/arq5x/ggd-recipes/git/trees/master?recursive=1"
   }
 
-def get_install_path(config_path):
+
+def _get_config_data(config_path):
   if config_path is None:
     config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           'config.yaml')
   with open(config_path, 'r') as f:
     config = yaml.load(f.read())
+  f.close()
+  return config
+
+def get_install_path(config_path):
+  """
+  Retrieve the  path for installing datasets from
+  the GGD config file.
+  """
+  config = _get_config_data(config_path)
   return config['path']['root']
 
 
 def set_install_path(data_path, config_path):
-  if config_path is None:
-    config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                          'config.yaml')
-  # load the existing config
-  with open(config_path, 'r') as f:
-    config = yaml.load(f.read())
-  f.close()
-
+  """
+  Change the path for installing datasets.
+  """
+  config = _get_config_data(config_path)
   # change the data path and update the config file
   config['path']['root'] = data_path
   with open(config_path, 'w') as f:
     f.write(yaml.dump(config, default_flow_style=False))
   f.close()
+
+
+def register_installed_recipe(args, recipe_dict):
+  """
+  Add a dataset to the list of installed datasets 
+  in the config file.
+  """
+  #config = AutoDict(_get_config_data(args.config))
+
+  #if 'installed' not in config:
+  #  config['installed']['recipe'] = args.recipe
+  #print recipe_dict
+
 
 
 def _get_recipe(args, url):
@@ -132,6 +151,10 @@ def install(parser, args):
     # convert YAML to a dictionary
     recipe_dict = yaml.load(recipe)
     if _run_recipe(args, recipe_dict):
+      
+      # TO DO
+      #register_installed_recipe(args, recipe_dict)
+      
       print >> sys.stderr, "installed " + args.recipe
     else:
       print >> sys.stderr, "failure installing " + args.recipe
@@ -167,9 +190,16 @@ def search_recipes(parser, args):
 
 def setpath(parser, args):
   """
-  Set the path to use for storing installed recipes
+  Set the path to use for storing installed datasets
   """
   set_install_path(args.path, args.config)
+
+
+def getpath(parser, args):
+  """
+  Get the path used for storing installed datasets
+  """
+  print os.path.expandvars(get_install_path(args.config))
 
 
 def main():
@@ -229,8 +259,18 @@ def main():
     dest='config',
     metavar='STRING',
     required=False,
-    help='Absolute location to config file')
+    help='Absolute location to a specific config file')
   parser_setpath.set_defaults(func=setpath)
+
+  # parser for getpath tool
+  parser_getpath = subparsers.add_parser('where',
+    help='Display the path in which datasets are installed.')
+  parser_getpath.add_argument('--config',
+    dest='config',
+    metavar='STRING',
+    required=False,
+    help='Absolute location to a specific config file')
+  parser_getpath.set_defaults(func=getpath)
 
   # parse the args and call the selected function
   args = parser.parse_args()
