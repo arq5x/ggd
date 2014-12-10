@@ -111,7 +111,7 @@ def _run_recipe(args, recipe):
   # bash, etc.
   recipe_version = recipe['attributes'].get('version')
   # used to validate the correctness of the dataset
-  recipe_sha1s = recipe['attributes'].get('sha1')
+  recipe_sha1s = [recipe['attributes'].get('sha1')]
 
   if args.region is None:
     recipe_type = recipe['recipe']['full']['recipe_type']
@@ -157,7 +157,7 @@ def _run_recipe(args, recipe):
       if observed_sha1 == recipe_sha1:
         print >> sys.stderr, "ok (" + observed_sha1 + ")"
       else:
-        print >> sys.stderr, "failed."
+        print >> sys.stderr, "failed (obs: " + observed_sha1 + ") != (exp: " + recipe_sha1
         print >> sys.stderr, "failure installing " + args.recipe + "."
         print >> sys.stderr, "perhaps the connection was disrupted? try again?"
 
