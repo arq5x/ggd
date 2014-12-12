@@ -3,9 +3,9 @@ GGD: Get Genomics Data
 
 This is just a sandbox to demonstrate, explore, and vet some ideas I have for developing a better system for curating relevant genomics datasets (mainly annotations) for reproducible research. I am exploring the use of existing tools such as [dat](http://dat-data.com/) and [conda](http://conda.pydata.org/docs/) for a long term solution. In the interim, this is a place to test ideas and seek feedback.
 
-The recipes for datasets retrieved from https://github.com/arq5x/ggd-recipes
+The recipes for datasets are, by default, retrieved from https://github.com/arq5x/ggd-recipes. The idea is to allow this cookbook of recipes to be updated by the research community. Moreover, the GGD software will be able to inspect other "cookbooks" besides the default via the use of the `--cookbook` option.
 
-The recipes follow an ontology. For example, one could use GGD to install CpG islands from UCSC for Human build 38.  The command would be:
+The recipes follow an ontology (that is a work in progress). For example, one could use GGD to install CpG islands from UCSC for Human build 38.  The command would be:
 
 	# Recipe hierarchy: source/species/genomebuild/name
 	ggd install ucsc/human/b38/cpg
