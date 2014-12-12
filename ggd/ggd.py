@@ -135,26 +135,44 @@ def _run_recipe(args, recipe):
   if not os.path.exists(install_path):
     os.makedirs(install_path)
 
+
+  print >> sys.stderr, "executing recipe:"
   for idx, cmd in enumerate(recipe_cmds):
     out_file = os.path.join(install_path, recipe_outfiles[idx])
     f = open(out_file, 'w')
     if recipe_type == 'bash':
       if args.region is not None:
         cmd += ' ' + args.region
-      ret = subprocess.call(cmd, stdout=f, shell=True)
-      if ret: # return non-zero if failure
-          print >> sys.stderr, "failure installing " + args.recipe
+
+      counter = 0
+      p = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+      while True:
+        line = p.stdout.readline()
+        counter += 1
+        if not line:
+          print >> sys.stderr, "."
+          break
+        if counter % 1000 == 0:
+          if counter % 40000 != 0:
+            print >> sys.stderr, ".",
+          else:
+            print >> sys.stderr, "."
+        f.write(line)
+
+      #if ret: # return non-zero if failure
+      #    print >> sys.stderr, "failure installing " + args.recipe
     else:
       print >> sys.stderr, "recipe_type not yet supported"
     f.close()
 
+
+    # validate the SHA1 checksum
     if isinstance(recipe_sha1s, list):
       recipe_sha1 = recipe_sha1s[idx]
     else:
       recipe_sha1 = recipe_sha1s
 
     if recipe_sha1 is not None and args.region is None:
-      # validate the SHA1 checksum
       print >> sys.stderr, \
         "validating dataset SHA1 checksum for " + out_file + "...",
       observed_sha1 = _get_sha1_checksum(out_file)

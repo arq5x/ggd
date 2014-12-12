@@ -26,12 +26,12 @@ setup(
         package_data = {'ggd': []},
         zip_safe = False,
         include_package_data=True,
-        #scripts = ['poretools/scripts/poretools'],
         entry_points = {
             'console_scripts' : [
-                 'ggd = ggd.ggd:main', 
+                 'ggd = ggd.ggd:main' 
             ],
         },  
+        scripts = ['ggd/scripts/query_biomart.py'],
         author_email="arq5x@virginia.edu",
         classifiers=[
             'Development Status :: 4 - Beta',
