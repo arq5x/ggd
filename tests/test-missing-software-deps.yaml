@@ -1,0 +1,15 @@
+attributes:
+    name: t1
+    version: 1
+    sha1: efaaea68910ee444b2756062b2ae2b990d5cdb71
+
+recipe:
+    full:
+        recipe_type: bash
+        recipe_cmds:
+            - echo "abc" > a
+        recipe_outfiles:
+            - a
+        dependencies: 
+            - software:
+               - nonexistentsoftware

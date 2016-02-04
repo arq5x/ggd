@@ -95,6 +95,29 @@ def _get_recipe(args, url):
             sys.stderr.write("failed\n")
             return None
 
+# from @chapmanb
+def check_software_deps(programs):
+    """Ensure the provided programs exist somewhere in the current PATH.
+    http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    """
+    if programs is None:
+        return True
+    if isinstance(programs, basestring):
+        programs = [programs]
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    for p in programs:
+        found = False
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, p)
+            if is_exe(exe_file):
+                found = True
+                break
+        if not found:
+            return False
+    return True
 
 def _run_recipe(args, recipe):
     """
@@ -112,6 +135,7 @@ def _run_recipe(args, recipe):
         recipe_cmds = recipe['recipe']['full']['recipe_cmds']
         # the output file names for the recipe.
         recipe_outfiles = recipe['recipe']['full']['recipe_outfiles']
+
     else:
         if 'region' in recipe['recipe']:
             # bash, etc.
@@ -122,6 +146,13 @@ def _run_recipe(args, recipe):
             recipe_outfiles = recipe['recipe']['region']['recipe_outfiles']
         else:
             sys.stderr.write("region queries not supported for " + args.recipe)
+
+    software = recipe['recipe']['full'].get('dependencies', [])
+    if not isinstance(software, list): software = [software]
+    software = [x for x in software if 'software' in x] or None
+    if software and not check_software_deps(software[0].get('software')):
+        sys.stderr.write("ERROR: didn't find required software for %s\n" % args.recipe)
+        sys.exit(5)
 
     # use os.path.expanduser to expand $HOME, etc.
     install_path = os.path.expandvars(get_install_path(args.config))
