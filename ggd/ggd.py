@@ -203,7 +203,8 @@ def install(parser, args):
             print >> sys.stderr, "failure installing " + args.recipe
         sys.exit(ret)
     else:
-        print >> sys.stderr, "exiting."
+        sys.stderr.write("exiting.\n")
+        sys.exit(2)
 
 
 def list_recipes(parser, args):
