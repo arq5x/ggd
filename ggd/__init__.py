@@ -1,3 +1,3 @@
 import os
 import sys
-import scripts
+from . import scripts
