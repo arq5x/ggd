@@ -145,14 +145,21 @@ def _run_recipe(args, recipe):
             sys.stderr.write("error processing recipe. exiting\n")
             sys.exit(p.returncode)
 
+
+        try:
+            recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
+        except IndexError:
+            sys.stderr.write("no SHA1 provided for recipe %d\n" % idx)
+            recipe_sha1 = None
+        if not sha_matches(out_file, recipe_sha1, args.recipe):
+            return 4
+
+    # only copy all the files at the end after success.
+    for idx, cmd in enumerate(recipe_cmds):
+        out_file = recipe_outfiles[idx]
         # here is where we will move the file.
         new_path = os.path.join(install_path, os.path.basename(out_file))
-
-        recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
-        if sha_matches(out_file, recipe_sha1, args.recipe):
-            shutil.move(out_file, new_path)
-        else:
-            return 4
+        shutil.move(out_file, new_path)
 
     return p.returncode
 
