@@ -82,7 +82,7 @@ def _get_recipe(args, url):
             sys.stderr.write("ok\n")
             return r.text
         else:
-            sys.stderr.write("failed")
+            sys.stderr.write("failed\n")
             return None
   #responses library doesn't support file:// requests
     else:
@@ -154,6 +154,7 @@ def _run_recipe(args, recipe):
         else:
             print >> sys.stderr, "recipe_type not yet supported"
         f.close()
+        p.wait()
 
         # TODO: make this a separate function.
         # validate the SHA1 checksum
@@ -174,8 +175,9 @@ def _run_recipe(args, recipe):
                                  ") != (exp: " + recipe_sha1 + ")\n")
                 sys.stderr.write("failure installing " + args.recipe + ".\n")
                 sys.stderr.write("perhaps the connection was disrupted? try again?\n")
+                return 4
 
-    return True
+    return p.returncode
 
 
 def install(parser, args):
@@ -195,13 +197,14 @@ def install(parser, args):
     if recipe is not None:
       # convert YAML to a dictionary
         recipe_dict = yaml.load(recipe)
-        if _run_recipe(args, recipe_dict):
+        ret = _run_recipe(args, recipe_dict)
+        if ret == 0:
             # TO DO
             #register_installed_recipe(args, recipe_dict)
-
             print >> sys.stderr, "installed " + args.recipe
         else:
             print >> sys.stderr, "failure installing " + args.recipe
+        sys.exit(ret)
     else:
         print >> sys.stderr, "exiting."
 
