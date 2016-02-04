@@ -1,18 +1,31 @@
 GGD: Get Genomics Data
-==========================
+======================
 
-This is just a sandbox to demonstrate, explore, and vet some ideas I have for developing a better system for curating relevant genomics datasets (mainly annotations) for reproducible research. I am exploring the use of existing tools such as [dat](http://dat-data.com/) and [conda](http://conda.pydata.org/docs/) for a long term solution. In the interim, this is a place to test ideas and seek feedback.
+[![Build Status](https://travis-ci.org/arq5x/ggd.svg?branch=master)](https://travis-ci.org/arq5x/ggd)
+
+When you download data for your use. You have a series of commands that you run like:
+
+```
+wget https://example.com/some.vcf
+# strip chr prefix
+awk '($0 ~ /^#/) { print; } ($0 !~ /^#/) { s/^chr// }' | vcfsort | bgzip -c > my.vcf.gz
+bedtools intersect -header -a my.vcf.gz -b my.bed > the-answer.vcf
+bgzip the-answer.vcf
+tabix the-answer.vcf.gz
+```
+
+And then you have the **answer**. Months later, it's unclear what version of the 
+depending files you used to get the answer. There are solutions to do versioning
+of software dependencies. GGD aims to do this for data dependencies.
+
+GGD aims to:
+
++ help retain provenance of files you're using for research (along with SHA1 checksums)
++ allow a means to aggregate and distribute publicly or internally the files along with their provenance
++ provide a means of specifying data-dependencies in the recipies (This is work in progress).
+
 
 The recipes for datasets are, by default, retrieved from https://github.com/arq5x/ggd-recipes. The idea is to allow this cookbook of recipes to be updated by the research community. Moreover, the GGD software will be able to inspect other "cookbooks" besides the default via the use of the `--cookbook` option.
-
-The recipes follow an ontology (that is a work in progress). For example, one could use GGD to install CpG islands from UCSC for Human build 38.  The command would be:
-
-	# Recipe hierarchy: source/species/genomebuild/name
-	ggd install ucsc/human/b38/cpg
-
-In this case, the recipe would live at:
-
-	https://github.com/arq5x/ggd-recipes/ucsc/human/b38/cpg.yaml
 
 Overview of the GGD design (long term vision):
 
@@ -24,7 +37,7 @@ Installation
 
     git clone https://github.com/arq5x/ggd
     cd ggd
-    sudo python setup.py install
+    python setup.py install
 
 
 Example usage
