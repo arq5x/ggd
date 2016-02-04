@@ -209,7 +209,7 @@ def sha_matches(path, expected_sha, recipe):
         return False
 
 
-def install(parser, args):
+def install(args):
     """
     Install a dataset based on a GGD recipe
     """
@@ -239,7 +239,7 @@ def install(parser, args):
         sys.exit(2)
 
 
-def list_recipes(parser, args):
+def list_recipes(args):
     """
     List all available datasets
     """
@@ -250,7 +250,7 @@ def list_recipes(parser, args):
             print branch['path'].rstrip('.yaml')
 
 
-def search_recipes(parser, args):
+def search_recipes(args):
     """
     Search for a recipe
     """
@@ -265,14 +265,14 @@ def search_recipes(parser, args):
         print >> sys.stderr, "No recipes available for {}".format(recipe)
 
 
-def setpath(parser, args):
+def setpath(args):
     """
     Set the path to use for storing installed datasets
     """
     set_install_path(args.path, args.config)
 
 
-def getpath(parser, args):
+def getpath(args):
     """
     Get the path used for storing installed datasets
     """
@@ -364,7 +364,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        args.func(parser, args)
+        args.func(args)
     except IOError, e:
         if e.errno != 32:  # ignore SIGPIPE
             raise
