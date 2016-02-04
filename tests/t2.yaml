@@ -11,7 +11,9 @@ recipe:
         recipe_cmds:
             - echo "abc" > a
             - echo "bbc" > b
+            - cp a c
         recipe_outfiles:
             - a
             - b
+            - c
 

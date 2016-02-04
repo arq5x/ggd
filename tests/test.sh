@@ -11,4 +11,5 @@ run test_good_sha ggd install --cookbook file://$(pwd)/tests/ t2
 assert_equal $RETVAL 0
 assert_in_stderr "validating"
 assert_in_stderr "installed t2"
+assert_in_stderr "no SHA1 provided for" # no sha for the 3rd file
 
