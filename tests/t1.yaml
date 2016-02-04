@@ -1,0 +1,17 @@
+attributes:
+    name: t1
+    version: 1
+    sha1:
+        - efaaea68910ee444b2756062b2ae2b990d5cdb71
+        - 8c6e9635f50256e4ecd84bee2bfb1cb27cc8bbd1
+
+recipe:
+    full:
+        recipe_type: bash
+        recipe_cmds:
+            - echo "abc" > a
+            - echo "bbc" > b
+        recipe_outfiles:
+            - a
+            - b
+

@@ -130,54 +130,44 @@ def _run_recipe(args, recipe):
 
     print >> sys.stderr, "executing recipe:"
     for idx, cmd in enumerate(recipe_cmds):
-        out_file = os.path.join(install_path, recipe_outfiles[idx])
-        f = open(out_file, 'w')
+        out_file = recipe_outfiles[idx]
         if recipe_type == 'bash':
             if args.region is not None:
                 cmd += ' ' + args.region
 
-            counter = 0
-            p = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
-            while True:
-                line = p.stdout.readline()
-                counter += 1
-                if not line:
-                    print >> sys.stderr, "."
-                    break
-                if counter % 1000 == 0:
-                    if counter % 40000 != 0:
-                        print >> sys.stderr, ".",
-                    else:
-                        print >> sys.stderr, "."
-                f.write(line)
-
+            p = subprocess.Popen([cmd], stderr=sys.stderr,
+                                 stdout=sys.stdout, shell=True)
         else:
             print >> sys.stderr, "recipe_type not yet supported"
-        f.close()
+            sys.exit(2)
         p.wait()
+        if p.returncode != 0:
+            sys.stderr.write("error processing recipe. exiting\n")
+            sys.exit(p.returncode)
 
-        # TODO: make this a separate function.
-        # validate the SHA1 checksum
-        if isinstance(recipe_sha1s, list):
-            recipe_sha1 = recipe_sha1s[idx]
+        # here is where we will move the file.
+        new_path = os.path.join(install_path, os.path.basename(out_file))
+
+        recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
+        if sha_matches(out_file, recipe_sha1, args.recipe):
+            shutil.move(out_file, new_path)
         else:
-            recipe_sha1 = recipe_sha1s
-
-        # TODO: set different exit code on failed sha?
-        if recipe_sha1 is not None and args.region is None:
-            print >> sys.stderr, \
-              "validating dataset SHA1 checksum for " + out_file + "...",
-            observed_sha1 = _get_sha1_checksum(out_file)
-            if observed_sha1 == recipe_sha1:
-                sys.stderr.write("ok (" + observed_sha1 + ")\n")
-            else:
-                sys.stderr.write("failed (obs: " + observed_sha1 +
-                                 ") != (exp: " + recipe_sha1 + ")\n")
-                sys.stderr.write("failure installing " + args.recipe + ".\n")
-                sys.stderr.write("perhaps the connection was disrupted? try again?\n")
-                return 4
+            return 4
 
     return p.returncode
+
+def sha_matches(path, expected_sha, recipe):
+    if expected_sha is None: return True
+    sys.stderr.write("validating dataset SHA1 checksum for %s...\n" % path)
+    obs = _get_sha1_checksum(path)
+    if obs == expected_sha:
+        sys.stderr.write("ok (" + obs + ")\n")
+        return True
+    else:
+        sys.stderr.write("ERROR in sha1 check. obs: %s != exp %s\n" % (obs, expected_sha))
+        sys.stderr.write("failure installing " + recipe + ".\n")
+        sys.stderr.write("perhaps the connection was disrupted? try again?\n")
+        return False
 
 
 def install(parser, args):
