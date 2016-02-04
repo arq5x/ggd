@@ -151,7 +151,8 @@ def _run_recipe(args, recipe):
     if not isinstance(software, list): software = [software]
     software = [x for x in software if 'software' in x] or None
     if software and not check_software_deps(software[0].get('software')):
-        sys.stderr.write("ERROR: didn't find required software for %s\n" % args.recipe)
+        sys.stderr.write("ERROR: didn't find required software %s for %s\n" %
+                         (software[0].get('software'), args.recipe))
         sys.exit(5)
 
     # use os.path.expanduser to expand $HOME, etc.
