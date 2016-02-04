@@ -1,0 +1,1 @@
+script: bash tests/test.sh
