@@ -4,11 +4,11 @@ attributes:
     sha1: 03cfd743661f07975fa2f1220c5194cbaff48451
 
 recipe:
-    full:
-        recipe_type: bash
-        recipe_cmds:
+    make:
+        type: bash
+        cmds:
             - echo "abc" > a
-        recipe_outfiles:
+        outfiles:
             - a
         dependencies: 
             - software:

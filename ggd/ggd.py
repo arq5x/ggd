@@ -17,7 +17,6 @@ recipe_urls = {
   "api": "https://api.github.com/repos/arq5x/ggd-recipes/git/trees/master?recursive=1"
   }
 
-
 def _get_config_data(config_path):
     if config_path is None:
         config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -130,24 +129,24 @@ def _run_recipe(args, recipe):
     recipe_sha1s = recipe['attributes'].get('sha1')
 
     if args.region is None:
-        recipe_type = recipe['recipe']['full']['recipe_type']
+        recipe_type = recipe['recipe']['make']['type']
         # specific commnads to execute recipe.
-        recipe_cmds = recipe['recipe']['full']['recipe_cmds']
+        recipe_cmds = recipe['recipe']['make']['cmds']
         # the output file names for the recipe.
-        recipe_outfiles = recipe['recipe']['full']['recipe_outfiles']
+        recipe_outfiles = recipe['recipe']['make']['outfiles']
 
     else:
         if 'region' in recipe['recipe']:
             # bash, etc.
-            recipe_type = recipe['recipe']['region']['recipe_type']
+            recipe_type = recipe['recipe']['region']['type']
             # specific commnads to execute recipe.
-            recipe_cmds = recipe['recipe']['region']['recipe_cmds']
+            recipe_cmds = recipe['recipe']['region']['cmds']
             # the output file names for the recipe.
-            recipe_outfiles = recipe['recipe']['region']['recipe_outfiles']
+            recipe_outfiles = recipe['recipe']['region']['outfiles']
         else:
             sys.stderr.write("region queries not supported for " + args.recipe)
 
-    software = recipe['recipe']['full'].get('dependencies', [])
+    software = recipe['recipe']['make'].get('dependencies', [])
     if not isinstance(software, list): software = [software]
     software = [x for x in software if 'software' in x] or None
     if software and not check_software_deps(software[0].get('software')):

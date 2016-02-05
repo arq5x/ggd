@@ -6,12 +6,12 @@ attributes:
         - 8c6e9635f50256e4ecd84bee2bfb1cb27cc8bbd1
 
 recipe:
-    full:
-        recipe_type: bash
-        recipe_cmds:
+    make:
+        type: bash
+        cmds:
             - echo "abc" > a
             - echo "bbc" > b
-        recipe_outfiles:
+        outfiles:
             - a
             - b
 
