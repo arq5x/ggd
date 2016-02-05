@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import argparse
 import os
@@ -157,7 +158,7 @@ def _run_recipe(args, recipe):
                          (software[0].get('software'), args.recipe))
         sys.exit(5)
 
-    print >> sys.stderr, "executing recipe:"
+    sys.stderr.write("executing recipe:\n")
     for idx, cmd in enumerate(recipe_cmds):
         out_file = recipe_outfiles[idx]
         if recipe_type == 'bash':
@@ -165,7 +166,7 @@ def _run_recipe(args, recipe):
             p = subprocess.Popen([cmd], stderr=sys.stderr,
                                  stdout=sys.stdout, shell=True)
         else:
-            print >> sys.stderr, "recipe_type not yet supported"
+            sys.stderr.write("recipe_type not yet supported\n")
             sys.exit(2)
         p.wait()
         if p.returncode != 0:
@@ -225,9 +226,9 @@ def install(args):
         if ret == 0:
             # TO DO
             # register_installed_recipe(args, recipe_dict)
-            print >> sys.stderr, "installed " + args.recipe
+            sys.stderr.write("installed " + args.recipe + "\n")
         else:
-            print >> sys.stderr, "failure installing " + args.recipe
+            sys.stderr.write("failure installing " + args.recipe + "\n")
         sys.exit(ret)
     else:
         sys.stderr.write("recipe not found exiting.\n")
@@ -242,7 +243,7 @@ def list_recipes(args):
     tree = request.json()['tree']
     for branch in tree:
         if ".yaml" in branch["path"]:
-            print branch['path'].rstrip('.yaml')
+            print(branch['path'].rstrip('.yaml'))
 
 
 def search_recipes(args):
@@ -254,10 +255,10 @@ def search_recipes(args):
     tree = request.json()['tree']
     matches = [branch['path'] for branch in tree if recipe in branch['path'] and ".yaml" in branch["path"]]
     if matches:
-        print "Available recipes:"
-        print "\n".join(match.rstrip('.yaml') for match in matches)
+        print("Available recipes:")
+        print("\n".join(match.rstrip('.yaml') for match in matches))
     else:
-        print >> sys.stderr, "No recipes available for {}".format(recipe)
+        print("No recipes available for {}".format(recipe), file=sys.stderr)
 
 
 def setpath(args):
@@ -354,6 +355,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         import doctest
-        sys.exit(doctest.testmod(verbose=True))
+        ret = doctest.testmod()
+        print(ret, file=sys.stderr)
+        sys.exit(ret.failed)
 
     main()
