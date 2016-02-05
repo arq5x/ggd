@@ -157,23 +157,55 @@ def exit_unless(b, code=1, msg=None):
         print(msg, file=sys.stderr)
     if not b: sys.exit(code)
 
-def make(recipe, name, version, sha1=None, overwrite=False):
+def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     """
     >>> make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
-    ...      "name_test", "v0.0.1", "03cfd743661f07975fa2f1220c5194cbaff48451")
+    ...      "name_test", "v0.0.1",
+    ...      "~/ggd_data/",
+    ...      ["03cfd743661f07975fa2f1220c5194cbaff48451"])
     """
-    # make sure we can overwrite if we need to.
-    exit_unless(check_outfiles(get_list(recipe, 'outfiles'), overwrite))
 
     # check that we have the software that we need.
     software = get_list(recipe, ('dependencies', 'software'))
     msg = "didn't find required software: %s for %s\n" % (software, name)
     exit_unless(check_software_deps(software), code=5, msg=msg)
 
+    if sha1s is None: sha1s = []
+    out_files = []
+
+    # set template variables
+    tmpl_vars = dict(GGD_PATH=install_path, version=version,
+                     name=recipe['attributes']['name'],
+                     DATE=datetime.date.today().strftime("%Y-%m-%d"))
+
     # TODO: data dependencies
     for i, cmd in enumerate(recipe['cmds']):
-        pass
+        try:
+            tmpl_vars['sha1'] = sha1s[i]
+        except IndexError:
+            tmpl_vars['sha1'] = ''
+            sys.stderr.write("WARNING: no SHA1 provided for recipe %s/%d\n" % (name, i))
 
+        tcmd = Template(cmd).safe_substitute(tmpl_vars)
+
+        p = subprocess.Popen([tcmd], stderr=sys.stderr,
+                             stdout=sys.stdout, shell=True)
+        p.wait()
+        if p.returncode != 0:
+            sys.stderr.write("error processing recipe. exiting\n")
+            sys.exit(p.returncode)
+
+        out = Template(recipe['outfiles'][i]).safe_substitute(tmpl_vars)
+        exit_unless(check_outfiles([out], overwrite))
+        out_files.append(out)
+
+        p = subprocess.Popen([tcmd], stderr=sys.stderr,
+                             stdout=sys.stdout, shell=True)
+        p.wait()
+        msg = "error processing recipe."
+        exit_unless(p.returncode == 0, code=p.returncode, msg=msg)
+
+        exit_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
 
 def _run_recipe(args, recipe):
     """
@@ -237,7 +269,7 @@ def _run_recipe(args, recipe):
     return p.returncode
 
 def sha_matches(path, expected_sha, recipe):
-    if expected_sha is None: return True
+    if expected_sha is None or expected_sha == '': return True
     sys.stderr.write("validating dataset SHA1 checksum for %s...\n" % path)
     if not os.path.exists(path):
         sys.stderr.write("ERROR: path not found: %s...\n" % path)
