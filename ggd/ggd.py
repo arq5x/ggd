@@ -119,10 +119,11 @@ def check_software_deps(programs):
             return False
     return True
 
-def make(recipe_dict, name, version, sha1=None):
+def make(recipe_dict, name, version, sha1=None, overwrite=False):
     """
-    >>> make({'type': 'bash', 'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
+    >>> make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
     ...      "name_test", "v0.0.1", "03cfd743661f07975fa2f1220c5194cbaff48451")
+
 
     """
 
@@ -138,13 +139,10 @@ def _run_recipe(args, recipe):
     Execute the contents of a YAML-structured recipe.
     """
 
-
-    # bash, etc.
     recipe_version = recipe['attributes'].get('version')
     # used to validate the correctness of the dataset
     recipe_sha1s = recipe['attributes'].get('sha1')
 
-    recipe_type = recipe['recipe']['make']['type']
     # specific commnads to execute recipe.
     recipe_cmds = recipe['recipe']['make']['cmds']
     # the output file names for the recipe.
@@ -161,13 +159,8 @@ def _run_recipe(args, recipe):
     sys.stderr.write("executing recipe:\n")
     for idx, cmd in enumerate(recipe_cmds):
         out_file = recipe_outfiles[idx]
-        if recipe_type == 'bash':
-
-            p = subprocess.Popen([cmd], stderr=sys.stderr,
-                                 stdout=sys.stdout, shell=True)
-        else:
-            sys.stderr.write("recipe_type not yet supported\n")
-            sys.exit(2)
+        p = subprocess.Popen([cmd], stderr=sys.stderr,
+                             stdout=sys.stdout, shell=True)
         p.wait()
         if p.returncode != 0:
             sys.stderr.write("error processing recipe. exiting\n")
