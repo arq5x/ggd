@@ -22,7 +22,7 @@ def _get_config_data(config_path):
         config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    'config.yaml')
     with open(config_path, 'r') as f:
-       config = yaml.load(f.read())
+        config = yaml.load(f.read())
     return config
 
 def _get_sha1_checksum(filename, blocksize=65536):
@@ -83,7 +83,7 @@ def _get_recipe(args, url):
         else:
             sys.stderr.write("failed\n")
             return None
-  #responses library doesn't support file:// requests
+    #responses library doesn't support file:// requests
     else:
         r = urllib2.urlopen(url)
         if r.getcode() is None:
@@ -223,12 +223,12 @@ def install(args):
     recipe = _get_recipe(args, recipe_url)
 
     if recipe is not None:
-      # convert YAML to a dictionary
+        # convert YAML to a dictionary
         recipe_dict = yaml.load(recipe)
         ret = _run_recipe(args, recipe_dict)
         if ret == 0:
             # TO DO
-            #register_installed_recipe(args, recipe_dict)
+            # register_installed_recipe(args, recipe_dict)
             print >> sys.stderr, "installed " + args.recipe
         else:
             print >> sys.stderr, "failure installing " + args.recipe
@@ -280,7 +280,6 @@ def getpath(args):
 
 def main():
 
-  # create the top-level parser
     parser = argparse.ArgumentParser(prog='ggd')
     parser.add_argument("-v", "--version", help="Installed ggd version",
                         action="version",
