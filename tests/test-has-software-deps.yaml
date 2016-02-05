@@ -5,7 +5,6 @@ attributes:
 
 recipe:
     make:
-        type: bash
         cmds:
             - echo "abc" > a
         outfiles:

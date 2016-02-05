@@ -131,6 +131,36 @@ Remind yourself of the path where in which the datasets are located:
 
 	$ ggd where
 
+String Templates
+================
+
+Recipes are written in bash but will be populated by `ggd` with some template variabes:
++ ${DATE}
++ ${version} # pulled from the attributes section in the yaml
++ ${name} # pulled from the attributes section in the yaml
++  ${GGD_DATA} path to the data directory (usually ~/ggd_data/) this will allow recipes to specify paths to existing ggd resources that have already been installed.
++ ${sha1} -- the sha for the current entry under commands.
+
+So, a command can look like:
+```
+- echo "abc" > a.${name}.${version}
+```
+and the corresponding `outfiles` section will look like
+```
+- a.${name}.${version}
+```
+
+This makes it so that a user can change the $name and $version in the `attributes`
+section and the recipe will be updated accordingly.
+
+See the [tests](https://github.com/arq5x/ggd/tree/master/tests) directory for example
+yamls that use this templating (t2.yaml specifically).
+
+
+
+
+
+
 
 Dependencies
 ============

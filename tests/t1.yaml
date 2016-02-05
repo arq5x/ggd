@@ -7,11 +7,10 @@ attributes:
 
 recipe:
     make:
-        type: bash
         cmds:
-            - echo "abc" > a
-            - echo "bbc" > b
+            - echo "xxxxbc" > a.${version}
+            - echo "xxxbbc" > b.${name}.${sha1}
         outfiles:
-            - a
-            - b
+            - a.${version}
+            - b.${name}.8c6e9635f50256e4ecd84bee2bfb1cb27cc8bbd1
 

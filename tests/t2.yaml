@@ -7,13 +7,12 @@ attributes:
 
 recipe:
     make:
-        type: bash
         cmds:
-            - echo "abc" > a
-            - echo "bbc" > b
-            - cp a c
+            - echo "abc" > a.${name}.${version}
+            - echo "bbc" > b.${sha1}
+            - echo "${DATE}" > c
         outfiles:
-            - a
-            - b
+            - a.t2.1 # note, should use ${name}.${version} here, this is for testing
+            - b.${sha1}
             - c
 

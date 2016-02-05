@@ -7,10 +7,11 @@ import requests
 import shutil
 import subprocess
 import sys
-import tempfile
+import datetime
 import urllib2
 import yaml
 import hashlib
+from string import Template
 
 
 recipe_urls = {
@@ -119,6 +120,13 @@ def check_software_deps(programs):
             return False
     return True
 
+
+def setup(args):
+    install_path = get_install_path(args)
+    if not os.path.exists(install_path):
+        os.makedirs(install_path)
+
+
 def make(recipe_dict, name, version, sha1=None, overwrite=False):
     """
     >>> make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
@@ -127,12 +135,6 @@ def make(recipe_dict, name, version, sha1=None, overwrite=False):
 
     """
 
-
-def setup(args):
-    # use os.path.expanduser to expand $HOME, etc.
-    install_path = get_install_path(args)
-    if not os.path.exists(install_path):
-        os.makedirs(install_path)
 
 def _run_recipe(args, recipe):
     """
@@ -156,30 +158,43 @@ def _run_recipe(args, recipe):
                          (software[0].get('software'), args.recipe))
         sys.exit(5)
 
+    install_path = get_install_path(args)
+
     sys.stderr.write("executing recipe:\n")
+    out_files = []
     for idx, cmd in enumerate(recipe_cmds):
-        out_file = recipe_outfiles[idx]
-        p = subprocess.Popen([cmd], stderr=sys.stderr,
+        try:
+            recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
+        except IndexError:
+            sys.stderr.write("no SHA1 provided for recipe %d\n" % idx)
+            recipe_sha1 = None
+
+        # set template variables
+        tmpl_vars = dict(GGD_PATH=install_path, version=recipe_version,
+                         name=recipe['attributes']['name'],
+                         DATE=datetime.date.today().strftime("%Y-%m-%d"),
+                         sha1=recipe_sha1 or '')
+
+        tcmd = Template(cmd).safe_substitute(tmpl_vars)
+
+        p = subprocess.Popen([tcmd], stderr=sys.stderr,
                              stdout=sys.stdout, shell=True)
         p.wait()
         if p.returncode != 0:
             sys.stderr.write("error processing recipe. exiting\n")
             sys.exit(p.returncode)
 
+        out_file = Template(recipe_outfiles[idx]).safe_substitute(tmpl_vars)
 
-        try:
-            recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
-        except IndexError:
-            sys.stderr.write("no SHA1 provided for recipe %d\n" % idx)
-            recipe_sha1 = None
         if not sha_matches(out_file, recipe_sha1, args.recipe):
             return 4
-
+        out_files.append(out_file)
     # only copy all the files at the end after success.
     for idx, cmd in enumerate(recipe_cmds):
-        out_file = recipe_outfiles[idx]
+        out_file = out_files[idx]
         # here is where we will move the file.
-        new_path = os.path.join(get_install_path(args), os.path.basename(out_file))
+        # TODO: make sub-directories as needed for out_file
+        new_path = os.path.join(get_install_path(args), out_file)
         shutil.move(out_file, new_path)
 
     return p.returncode
@@ -187,6 +202,10 @@ def _run_recipe(args, recipe):
 def sha_matches(path, expected_sha, recipe):
     if expected_sha is None: return True
     sys.stderr.write("validating dataset SHA1 checksum for %s...\n" % path)
+    if not os.path.exists(path):
+        sys.stderr.write("ERROR: path not found: %s...\n" % path)
+        return False
+
     obs = _get_sha1_checksum(path)
     if obs == expected_sha:
         sys.stderr.write("ok (" + obs + ")\n")
