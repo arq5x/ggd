@@ -101,7 +101,7 @@ def check_software_deps(programs):
     """Ensure the provided programs exist somewhere in the current PATH.
     http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
     """
-    if programs is None:
+    if not programs:
         return True
     if isinstance(programs, basestring):
         programs = [programs]
@@ -126,14 +126,53 @@ def setup(args):
     if not os.path.exists(install_path):
         os.makedirs(install_path)
 
+# yaml can be either empty or a list or a single value.
+# we just want an empty list or a list of values.
+def get_list(d, keys):
+    if isinstance(keys, basestring):
+        keys = [keys]
 
-def make(recipe_dict, name, version, sha1=None, overwrite=False):
+    for k in keys[:len(keys)-1]:
+        d = d.get(k, {})
+        if isinstance(d, list):
+            assert len(d) == 1 and isinstance(d[0], dict)
+            d = d[0]
+    key = keys[-1]
+    v = d.get(key, [])
+    if not isinstance(v, list):
+        v = [v]
+    return v
+
+def check_outfiles(files, overwrite=False):
+    ok = True
+    for f in files:
+        if os.path.path.exists(f):
+            print("%s: %s exists." % ("WARNING" if overwrite else "ERROR", f),
+                  file=sys.stderr)
+            ok = overwrite
+    return ok
+
+def exit_unless(b, code=1, msg=None):
+    if msg:
+        print(msg, file=sys.stderr)
+    if not b: sys.exit(code)
+
+def make(recipe, name, version, sha1=None, overwrite=False):
     """
     >>> make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
     ...      "name_test", "v0.0.1", "03cfd743661f07975fa2f1220c5194cbaff48451")
-
-
     """
+    # make sure we can overwrite if we need to.
+    exit_unless(check_outfiles(get_list(recipe, 'outfiles'), overwrite))
+
+    # check that we have the software that we need.
+    software = get_list(recipe, ('dependencies', 'software'))
+    msg = "didn't find required software: %s for %s\n" % (software, name)
+    exit_unless(check_software_deps(software), code=5, msg=msg)
+
+    # TODO: data dependencies
+    for i, cmd in enumerate(recipe['cmds']):
+        pass
 
 
 def _run_recipe(args, recipe):
@@ -150,12 +189,10 @@ def _run_recipe(args, recipe):
     # the output file names for the recipe.
     recipe_outfiles = recipe['recipe']['make']['outfiles']
 
-    software = recipe['recipe']['make'].get('dependencies', [])
-    if not isinstance(software, list): software = [software]
-    software = [x for x in software if 'software' in x] or None
-    if software and not check_software_deps(software[0].get('software')):
+    software = get_list(recipe['recipe']['make'], ('dependencies', 'software'))
+    if not check_software_deps(software):
         sys.stderr.write("ERROR: didn't find required software %s for %s\n" %
-                         (software[0].get('software'), args.recipe))
+                         (software, args.recipe))
         sys.exit(5)
 
     install_path = get_install_path(args)
@@ -308,6 +345,11 @@ def main():
       metavar='STRING',
       required=False,
       help='Absolute location to config file')
+
+    parser_install.add_argument('--overwrite',
+        action='store_true',
+        help='Overwrite existing files with the same name.'
+             ' Default is to error if this happens.')
 
     parser_install.set_defaults(func=install)
 
