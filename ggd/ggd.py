@@ -38,14 +38,14 @@ def _get_sha1_checksum(filename, blocksize=65536):
         buf = f.read(blocksize)
     return hasher.hexdigest()
 
-
-def get_install_path(config_path):
+def get_install_path(args):
     """
     Retrieve the  path for installing datasets from
     the GGD config file.
     """
-    config = _get_config_data(config_path)
-    return config['path']['root']
+    op = os.path
+    config = _get_config_data(args.config)
+    return op.abspath(op.expanduser(op.expandvars(config['path']['root'])))
 
 
 def set_install_path(data_path, config_path):
@@ -118,33 +118,36 @@ def check_software_deps(programs):
             return False
     return True
 
+def make(recipe_dict, name, version, sha1=None):
+    """
+    >>> make({'type': 'bash', 'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
+    ...      "name_test", "v0.0.1", "03cfd743661f07975fa2f1220c5194cbaff48451")
+
+    """
+
+
+def setup(args):
+    # use os.path.expanduser to expand $HOME, etc.
+    install_path = get_install_path(args)
+    if not os.path.exists(install_path):
+        os.makedirs(install_path)
+
 def _run_recipe(args, recipe):
     """
     Execute the contents of a YAML-structured recipe.
     """
 
-      # bash, etc.
+
+    # bash, etc.
     recipe_version = recipe['attributes'].get('version')
     # used to validate the correctness of the dataset
     recipe_sha1s = recipe['attributes'].get('sha1')
 
-    if args.region is None:
-        recipe_type = recipe['recipe']['make']['type']
-        # specific commnads to execute recipe.
-        recipe_cmds = recipe['recipe']['make']['cmds']
-        # the output file names for the recipe.
-        recipe_outfiles = recipe['recipe']['make']['outfiles']
-
-    else:
-        if 'region' in recipe['recipe']:
-            # bash, etc.
-            recipe_type = recipe['recipe']['region']['type']
-            # specific commnads to execute recipe.
-            recipe_cmds = recipe['recipe']['region']['cmds']
-            # the output file names for the recipe.
-            recipe_outfiles = recipe['recipe']['region']['outfiles']
-        else:
-            sys.stderr.write("region queries not supported for " + args.recipe)
+    recipe_type = recipe['recipe']['make']['type']
+    # specific commnads to execute recipe.
+    recipe_cmds = recipe['recipe']['make']['cmds']
+    # the output file names for the recipe.
+    recipe_outfiles = recipe['recipe']['make']['outfiles']
 
     software = recipe['recipe']['make'].get('dependencies', [])
     if not isinstance(software, list): software = [software]
@@ -154,17 +157,10 @@ def _run_recipe(args, recipe):
                          (software[0].get('software'), args.recipe))
         sys.exit(5)
 
-    # use os.path.expanduser to expand $HOME, etc.
-    install_path = os.path.expandvars(get_install_path(args.config))
-    if not os.path.exists(install_path):
-        os.makedirs(install_path)
-
     print >> sys.stderr, "executing recipe:"
     for idx, cmd in enumerate(recipe_cmds):
         out_file = recipe_outfiles[idx]
         if recipe_type == 'bash':
-            if args.region is not None:
-                cmd += ' ' + args.region
 
             p = subprocess.Popen([cmd], stderr=sys.stderr,
                                  stdout=sys.stdout, shell=True)
@@ -189,7 +185,7 @@ def _run_recipe(args, recipe):
     for idx, cmd in enumerate(recipe_cmds):
         out_file = recipe_outfiles[idx]
         # here is where we will move the file.
-        new_path = os.path.join(install_path, os.path.basename(out_file))
+        new_path = os.path.join(get_install_path(args), os.path.basename(out_file))
         shutil.move(out_file, new_path)
 
     return p.returncode
@@ -207,12 +203,12 @@ def sha_matches(path, expected_sha, recipe):
         sys.stderr.write("perhaps the connection was disrupted? try again?\n")
         return False
 
-
 def install(args):
     """
     Install a dataset based on a GGD recipe
     """
     recipe = args.recipe
+    setup(args)
 
     if args.cookbook is None:
         recipe_url = recipe_urls['core'] + recipe + '.yaml'
@@ -234,7 +230,7 @@ def install(args):
             print >> sys.stderr, "failure installing " + args.recipe
         sys.exit(ret)
     else:
-        sys.stderr.write("exiting.\n")
+        sys.stderr.write("recipe not found exiting.\n")
         sys.exit(2)
 
 
@@ -271,13 +267,6 @@ def setpath(args):
     set_install_path(args.path, args.config)
 
 
-def getpath(args):
-    """
-    Get the path used for storing installed datasets
-    """
-    print os.path.expandvars(get_install_path(args.config))
-
-
 def main():
 
     parser = argparse.ArgumentParser(prog='ggd')
@@ -293,12 +282,6 @@ def main():
     parser_install.add_argument('recipe',
       metavar='STRING',
       help='The GGD recipe to use.')
-
-    parser_install.add_argument('--region',
-      dest='region',
-      metavar='STRING',
-      required=False,
-      help='A genomic region to extract. E.g., chr1:100-200')
 
     parser_install.add_argument('--cookbook',
       dest='cookbook',
@@ -356,7 +339,7 @@ def main():
       required=False,
       help='Absolute location to a specific config file')
 
-    parser_getpath.set_defaults(func=getpath)
+    parser_getpath.set_defaults(func=get_install_path)
 
     # parse the args and call the selected function
     args = parser.parse_args()
@@ -368,4 +351,9 @@ def main():
             raise
 
 if __name__ == "__main__":
+
+    if len(sys.argv) > 1 and sys.argv[1] == "test":
+        import doctest
+        sys.exit(doctest.testmod(verbose=True))
+
     main()
