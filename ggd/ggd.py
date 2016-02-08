@@ -154,11 +154,15 @@ def check_outfiles(files, overwrite=False):
             ok = overwrite
     return ok
 
-def exit_unless(b, code=1, msg=None):
-    if b: return
+def msg_unless(b, code=1, msg=None):
+    """
+    if b is True, all is OK. If it's not,
+    print an optional message the return the code.
+    """
+    if b: return 0
     if msg:
         print(msg, file=sys.stderr)
-    sys.exit(code)
+    return code
 
 def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     """
@@ -171,7 +175,8 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     # check that we have the software that we need.
     software = get_list(recipe, ('dependencies', 'software'))
     msg = "didn't find required software: %s for %s\n" % (software, name)
-    exit_unless(check_software_deps(software), code=5, msg=msg)
+    code = msg_unless(check_software_deps(software), code=5, msg=msg)
+    if code != 0: return code
 
     out_files = []
 
@@ -191,23 +196,28 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
         tcmd = Template(cmd).safe_substitute(tmpl_vars)
 
         out = Template(recipe['outfiles'][i]).safe_substitute(tmpl_vars)
-        exit_unless(check_outfiles([out], overwrite))
+        code = msg_unless(check_outfiles([out], overwrite))
+        if code != 0: return code
+
         out_files.append(out)
 
         ret = subprocess.check_call(tcmd, shell=True)
         msg = "error processing recipe."
-        exit_unless(ret == 0, code=ret, msg=msg)
+        code = msg_unless(ret == 0, code=ret, msg=msg)
+        if code != 0: return code
 
-        exit_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
+        code = msg_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
+        if code != 0: return code
 
     for out in out_files:
         if os.path.exists(os.path.join(install_path, out)):
             if overwrite:
                 os.unlink(os.path.join(install_path, out))
             else:
-                exit_unless(False, code=1,
+                code = msg_unless(False, code=1,
                             msg="ERROR: output file %s exists. Use --overwrite if needed" %
                             os.path.join(install_path, out))
+                if code != 0: return code
         shutil.move(out, install_path)
 
     return 0
