@@ -10,8 +10,9 @@ import sys
 import datetime
 import urllib2
 import yaml
-import hashlib
 from string import Template
+
+import utils
 
 
 recipe_urls = {
@@ -19,42 +20,12 @@ recipe_urls = {
   "api": "https://api.github.com/repos/arq5x/ggd-recipes/git/trees/master?recursive=1"
   }
 
-def _get_config_data(config_path):
-    if config_path is None:
-        config_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   'config.yaml')
-    with open(config_path, 'r') as f:
-        config = yaml.load(f.read())
-    return config
-
-def _get_sha1_checksum(filename, blocksize=65536):
-    """
-    Return the SHA1 checksum for a dataset.
-    http://stackoverflow.com/questions/3431825/generating-a-md5-checksum-of-a-file
-    """
-    hasher = hashlib.sha1()
-    f = open(filename, 'rb')
-    buf = f.read(blocksize)
-    while len(buf) > 0:
-        hasher.update(buf)
-        buf = f.read(blocksize)
-    return hasher.hexdigest()
-
-def get_install_path(args):
-    """
-    Retrieve the  path for installing datasets from
-    the GGD config file.
-    """
-    op = os.path
-    config = _get_config_data(args.config)
-    return op.abspath(op.expanduser(op.expandvars(config['path']['root'])))
-
 
 def set_install_path(data_path, config_path):
     """
     Change the path for installing datasets.
     """
-    config = _get_config_data(config_path)
+    config = utils._get_config_data(config_path)
     # change the data path and update the config file
     config['path']['root'] = data_path
     with open(config_path, 'w') as f:
@@ -96,79 +67,11 @@ def _get_recipe(args, url):
             sys.stderr.write("failed\n")
             return None
 
-# from @chapmanb
-def check_software_deps(programs):
-    """Ensure the provided programs exist somewhere in the current PATH.
-    http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
-    """
-    if not programs:
-        return True
-    if isinstance(programs, basestring):
-        programs = [programs]
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    for p in programs:
-        found = False
-        for path in os.environ["PATH"].split(os.pathsep):
-            path = path.strip('"')
-            exe_file = os.path.join(path, p)
-            if is_exe(exe_file):
-                found = True
-                break
-        if not found:
-            return False
-    return True
-
-
-def setup(args):
-    install_path = get_install_path(args)
-    if not os.path.exists(install_path):
-        os.makedirs(install_path)
-
-# yaml can be either empty or a list or a single value.
-# we just want an empty list or a list of values.
-def get_list(d, keys):
-    if isinstance(keys, basestring):
-        keys = [keys]
-
-    for k in keys[:len(keys)-1]:
-        d = d.get(k, {})
-        if isinstance(d, list):
-            assert len(d) == 1 and isinstance(d[0], dict)
-            d = d[0]
-    key = keys[-1]
-    v = d.get(key, [])
-    if not isinstance(v, list):
-        v = [v]
-    return v
-
-def check_outfiles(files, overwrite=False):
-    ok = True
-    for f in files:
-        if os.path.exists(f):
-            print("%s: %s exists." % ("WARNING" if overwrite else "ERROR", f),
-                  file=sys.stderr)
-            if not overwrite:
-                print("use --overwrite to force install.", file=sys.stderr)
-            ok = overwrite
-    return ok
-
-def msg_unless(b, code=1, msg=None):
-    """
-    if b is True, all is OK. If it's not,
-    print an optional message the return the code.
-    """
-    if b: return 0
-    if msg:
-        print(msg, file=sys.stderr)
-    return code
-
 def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     # check that we have the software that we need.
-    software = get_list(recipe, ('dependencies', 'software'))
+    software = utils.get_list(recipe, ('dependencies', 'software'))
     msg = "didn't find required software: %s for %s\n" % (software, name)
-    code = msg_unless(check_software_deps(software), code=5, msg=msg)
+    code = utils.msg_unless(utils.check_software_deps(software), code=5, msg=msg)
     if code != 0: return code
 
     out_files = []
@@ -192,17 +95,17 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
         tcmd = Template(cmd).safe_substitute(tmpl_vars)
 
         out = Template(recipe['outfiles'][i]).safe_substitute(tmpl_vars)
-        code = msg_unless(check_outfiles([out], overwrite))
+        code = utils.msg_unless(utils.check_outfiles([out], overwrite))
         if code != 0: return code
 
         out_files.append(out)
 
         ret = subprocess.check_call(tcmd, shell=True)
         msg = "error processing recipe."
-        code = msg_unless(ret == 0, code=ret, msg=msg)
+        code = utils.msg_unless(ret == 0, code=ret, msg=msg)
         if code != 0: return code
 
-        code = msg_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
+        code = utils.msg_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
         if code != 0: return code
 
     for out in out_files:
@@ -210,7 +113,7 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
             if overwrite:
                 os.unlink(os.path.join(install_path, out))
             else:
-                code = msg_unless(False, code=1,
+                code = utils.msg_unless(False, code=1,
                             msg="ERROR: output file %s exists. Use --overwrite if needed" %
                             os.path.join(install_path, out))
                 if code != 0: return code
@@ -225,8 +128,8 @@ def _run_recipe(args, recipe):
     return make(recipe['recipe']['make'],
                 recipe['attributes']['name'],
                 recipe['attributes']['version'],
-                get_install_path(args),
-                sha1s=get_list(recipe['attributes'], 'sha1'),
+                utils.get_install_path(args),
+                sha1s=utils.get_list(recipe['attributes'], 'sha1'),
                 overwrite=args.overwrite)
 
 def sha_matches(path, expected_sha, recipe):
@@ -236,7 +139,7 @@ def sha_matches(path, expected_sha, recipe):
         sys.stderr.write("ERROR: path not found: %s...\n" % path)
         return False
 
-    obs = _get_sha1_checksum(path)
+    obs = utils._get_sha1_checksum(path)
     if obs == expected_sha:
         sys.stderr.write("ok (" + obs + ")\n")
         return True
@@ -251,7 +154,7 @@ def install(args):
     Install a dataset based on a GGD recipe
     """
     recipe = args.recipe
-    setup(args)
+    utils.setup(args)
 
     if args.cookbook is None:
         recipe_url = recipe_urls['core'] + recipe + '.yaml'
@@ -387,7 +290,7 @@ def main():
       required=False,
       help='Absolute location to a specific config file')
 
-    parser_getpath.set_defaults(func=get_install_path)
+    parser_getpath.set_defaults(func=utils.get_install_path)
 
     # parse the args and call the selected function
     args = parser.parse_args()
