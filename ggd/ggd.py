@@ -190,24 +190,26 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
 
         tcmd = Template(cmd).safe_substitute(tmpl_vars)
 
-        p = subprocess.Popen([tcmd], stderr=sys.stderr,
-                             stdout=sys.stdout, shell=True)
-        p.wait()
-        if p.returncode != 0:
-            sys.stderr.write("error processing recipe. exiting\n")
-            sys.exit(p.returncode)
-
         out = Template(recipe['outfiles'][i]).safe_substitute(tmpl_vars)
         exit_unless(check_outfiles([out], overwrite))
         out_files.append(out)
 
-        p = subprocess.Popen([tcmd], stderr=sys.stderr,
-                             stdout=sys.stdout, shell=True)
-        p.wait()
+        ret = subprocess.check_call(tcmd, shell=True)
         msg = "error processing recipe."
-        exit_unless(p.returncode == 0, code=p.returncode, msg=msg)
+        exit_unless(ret == 0, code=ret, msg=msg)
 
         exit_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
+
+    for out in out_files:
+        if os.path.exists(os.path.join(install_path, out)):
+            if overwrite:
+                os.unlink(os.path.join(install_path, out))
+            else:
+                exit_unless(False, code=1,
+                            msg="ERROR: output file %s exists. Use --overwrite if needed" %
+                            os.path.join(install_path, out))
+        shutil.move(out, install_path)
+
     return 0
 
 def _run_recipe(args, recipe):
