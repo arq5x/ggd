@@ -1,5 +1,8 @@
 from ggd.ggd import make
 
+import ggd
+print ggd
+
 import tempfile
 import atexit
 import shutil
@@ -33,3 +36,9 @@ def test_make():
                ["03cfd743661f07975fa2f1220c5194cbaff48451"],
                overwrite=True)
     assert res == 0, res
+
+
+def test_make_deps():
+    res = make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa'],
+                "dependencies": {"data": {}}},
+               "name_test", "v0.0.1", TMP)

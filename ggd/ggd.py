@@ -165,13 +165,6 @@ def msg_unless(b, code=1, msg=None):
     return code
 
 def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
-    """
-    >>> make({'cmds': ['echo "abc" > aaa'], 'outfiles': ['aaa']},
-    ...      "name_test", "v0.0.1",
-    ...      "~/ggd_data/",
-    ...      ["03cfd743661f07975fa2f1220c5194cbaff48451"])
-    """
-
     # check that we have the software that we need.
     software = get_list(recipe, ('dependencies', 'software'))
     msg = "didn't find required software: %s for %s\n" % (software, name)
@@ -187,11 +180,14 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
 
     # TODO: data dependencies
     for i, cmd in enumerate(recipe['cmds']):
-        try:
-            tmpl_vars['sha1'] = sha1s[i]
-        except IndexError:
+        if sha1s is None:
             tmpl_vars['sha1'] = ''
-            sys.stderr.write("WARNING: no SHA1 provided for recipe %s/%d\n" % (name, i))
+        else:
+            try:
+                tmpl_vars['sha1'] = sha1s[i]
+            except IndexError:
+                tmpl_vars['sha1'] = ''
+                sys.stderr.write("WARNING: no SHA1 provided for recipe %s/%d\n" % (name, i))
 
         tcmd = Template(cmd).safe_substitute(tmpl_vars)
 
@@ -403,11 +399,5 @@ def main():
             raise
 
 if __name__ == "__main__":
-
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
-        import doctest
-        ret = doctest.testmod()
-        print(ret, file=sys.stderr)
-        sys.exit(ret.failed)
 
     main()
