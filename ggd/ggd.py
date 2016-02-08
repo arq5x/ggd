@@ -146,16 +146,19 @@ def get_list(d, keys):
 def check_outfiles(files, overwrite=False):
     ok = True
     for f in files:
-        if os.path.path.exists(f):
+        if os.path.exists(f):
             print("%s: %s exists." % ("WARNING" if overwrite else "ERROR", f),
                   file=sys.stderr)
+            if not overwrite:
+                print("use --overwrite to force install.", file=sys.stderr)
             ok = overwrite
     return ok
 
 def exit_unless(b, code=1, msg=None):
+    if b: return
     if msg:
         print(msg, file=sys.stderr)
-    if not b: sys.exit(code)
+    sys.exit(code)
 
 def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     """
@@ -170,12 +173,11 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
     msg = "didn't find required software: %s for %s\n" % (software, name)
     exit_unless(check_software_deps(software), code=5, msg=msg)
 
-    if sha1s is None: sha1s = []
     out_files = []
 
     # set template variables
     tmpl_vars = dict(GGD_PATH=install_path, version=version,
-                     name=recipe['attributes']['name'],
+                     name=name,
                      DATE=datetime.date.today().strftime("%Y-%m-%d"))
 
     # TODO: data dependencies
@@ -206,67 +208,18 @@ def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
         exit_unless(p.returncode == 0, code=p.returncode, msg=msg)
 
         exit_unless(sha_matches(out, tmpl_vars['sha1'], name), code=4)
+    return 0
 
 def _run_recipe(args, recipe):
     """
     Execute the contents of a YAML-structured recipe.
     """
-
-    recipe_version = recipe['attributes'].get('version')
-    # used to validate the correctness of the dataset
-    recipe_sha1s = recipe['attributes'].get('sha1')
-
-    # specific commnads to execute recipe.
-    recipe_cmds = recipe['recipe']['make']['cmds']
-    # the output file names for the recipe.
-    recipe_outfiles = recipe['recipe']['make']['outfiles']
-
-    software = get_list(recipe['recipe']['make'], ('dependencies', 'software'))
-    if not check_software_deps(software):
-        sys.stderr.write("ERROR: didn't find required software %s for %s\n" %
-                         (software, args.recipe))
-        sys.exit(5)
-
-    install_path = get_install_path(args)
-
-    sys.stderr.write("executing recipe:\n")
-    out_files = []
-    for idx, cmd in enumerate(recipe_cmds):
-        try:
-            recipe_sha1 = recipe_sha1s[idx] if isinstance(recipe_sha1s, list) else recipe_sha1s
-        except IndexError:
-            sys.stderr.write("no SHA1 provided for recipe %d\n" % idx)
-            recipe_sha1 = None
-
-        # set template variables
-        tmpl_vars = dict(GGD_PATH=install_path, version=recipe_version,
-                         name=recipe['attributes']['name'],
-                         DATE=datetime.date.today().strftime("%Y-%m-%d"),
-                         sha1=recipe_sha1 or '')
-
-        tcmd = Template(cmd).safe_substitute(tmpl_vars)
-
-        p = subprocess.Popen([tcmd], stderr=sys.stderr,
-                             stdout=sys.stdout, shell=True)
-        p.wait()
-        if p.returncode != 0:
-            sys.stderr.write("error processing recipe. exiting\n")
-            sys.exit(p.returncode)
-
-        out_file = Template(recipe_outfiles[idx]).safe_substitute(tmpl_vars)
-
-        if not sha_matches(out_file, recipe_sha1, args.recipe):
-            return 4
-        out_files.append(out_file)
-    # only copy all the files at the end after success.
-    for idx, cmd in enumerate(recipe_cmds):
-        out_file = out_files[idx]
-        # here is where we will move the file.
-        # TODO: make sub-directories as needed for out_file
-        new_path = os.path.join(get_install_path(args), out_file)
-        shutil.move(out_file, new_path)
-
-    return p.returncode
+    return make(recipe['recipe']['make'],
+                recipe['attributes']['name'],
+                recipe['attributes']['version'],
+                get_install_path(args),
+                sha1s=get_list(recipe['attributes'], 'sha1'),
+                overwrite=args.overwrite)
 
 def sha_matches(path, expected_sha, recipe):
     if expected_sha is None or expected_sha == '': return True
