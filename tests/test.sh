@@ -23,3 +23,8 @@ run test_overwrite ggd install --cookbook file://$(pwd)/tests/ test-has-software
 assert_exit_code 1
 assert_in_stderr "ERROR"
 assert_in_stderr "exists"
+
+run test_dep ggd install --overwrite --cookbook file://$(pwd)/tests/ t3
+assert_exit_code 0
+assert_in_stderr "searching for recipe: t2"
+

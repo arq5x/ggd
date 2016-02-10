@@ -40,19 +40,20 @@ def register_installed_recipe(args, recipe_dict):
     pass
 
 
-def _get_recipe(args, url):
+def _get_recipe(recipe, cookbook=None):
     """
     http://stackoverflow.com/questions/16694907/\
     how-to-download-large-file-in-python-with-requests-py
     """
-    sys.stderr.write("searching for recipe: " + args.recipe + "...")
+    sys.stderr.write("searching for recipe: " + recipe + "...")
+    url = url_for_recipe(recipe, cookbook)
 
     # hanndle core URL and http:// and ftp:// based cookbooks
-    if args.cookbook is None or "file://" not in args.cookbook:
+    if cookbook is None or "file://" not in cookbook:
         r = requests.get(url, stream=True)
         if r.status_code == 200:
             sys.stderr.write("ok\n")
-            return r.text
+            return yaml.load(r.text)
         else:
             sys.stderr.write("failed\n")
             return None
@@ -61,18 +62,38 @@ def _get_recipe(args, url):
         r = urllib2.urlopen(url)
         if r.getcode() is None:
             sys.stderr.write("ok\n")
-            return r.read()
+            return yaml.load(r.read())
         else:
             # TODO: set error code
             sys.stderr.write("failed\n")
             return None
 
-def make(recipe, name, version, install_path, sha1s=None, overwrite=False):
+def make_deps(deps, install_path, cookbook, overwrite=False):
+    # deps looks like: [{'version': 1, 'name': 't2'}, {'version': 1, 'name': 't1'}]
+    for dep in deps:
+        sys.stderr.write("\ninstalling dependency: {name}:{version}\n"\
+                .format(**dep))
+
+        recipe_dict = _get_recipe(dep['name'], cookbook)
+        sha1s = utils.get_list(recipe_dict['attributes'], 'sha1')
+        ret = make(recipe_dict["recipe"]["make"], dep['name'], dep['version'], install_path,
+             cookbook,
+             sha1s=sha1s, overwrite=overwrite)
+        code = utils.msg_unless(ret == 0, code=ret, msg="error installing dependency: %s" % dep['name'])
+        if code != 0:
+            sys.exit(code)
+
+
+def make(recipe, name, version, install_path, cookbook, sha1s=None, overwrite=False):
     # check that we have the software that we need.
     software = utils.get_list(recipe, ('dependencies', 'software'))
     msg = "didn't find required software: %s for %s\n" % (software, name)
     code = utils.msg_unless(utils.check_software_deps(software), code=5, msg=msg)
     if code != 0: return code
+
+    data_deps = utils.get_list(recipe, ("dependencies", "data"))
+    make_deps(data_deps, install_path, cookbook, overwrite)
+
 
     out_files = []
 
@@ -129,6 +150,7 @@ def _run_recipe(args, recipe):
                 recipe['attributes']['name'],
                 recipe['attributes']['version'],
                 utils.get_install_path(args),
+                args.cookbook,
                 sha1s=utils.get_list(recipe['attributes'], 'sha1'),
                 overwrite=args.overwrite)
 
@@ -141,13 +163,16 @@ def sha_matches(path, expected_sha, recipe):
 
     obs = utils._get_sha1_checksum(path)
     if obs == expected_sha:
-        sys.stderr.write("ok (" + obs + ")\n")
+        sys.stderr.write("ok (" + obs + ")\n\n")
         return True
     else:
         sys.stderr.write("ERROR in sha1 check. obs: %s != exp %s\n" % (obs, expected_sha))
         sys.stderr.write("failure installing " + recipe + ".\n")
         sys.stderr.write("perhaps the connection was disrupted? try again?\n")
         return False
+
+def url_for_recipe(recipe, cookbook=None):
+    return "{cookbook}{recipe}.yaml".format(cookbook=cookbook or "", recipe=recipe)
 
 def install(args):
     """
@@ -156,28 +181,21 @@ def install(args):
     recipe = args.recipe
     utils.setup(args)
 
-    if args.cookbook is None:
-        recipe_url = recipe_urls['core'] + recipe + '.yaml'
-    else:
-        recipe_url = args.cookbook + recipe + '.yaml'
-
     # get the raw YAML string contents of the recipe
-    recipe = _get_recipe(args, recipe_url)
+    recipe_dict = _get_recipe(recipe, args.cookbook)
 
-    if recipe is not None:
-        # convert YAML to a dictionary
-        recipe_dict = yaml.load(recipe)
-        ret = _run_recipe(args, recipe_dict)
-        if ret == 0:
-            # TO DO
-            # register_installed_recipe(args, recipe_dict)
-            sys.stderr.write("installed " + args.recipe + "\n")
-        else:
-            sys.stderr.write("failure installing " + args.recipe + "\n")
-        sys.exit(ret)
-    else:
+    if recipe_dict is None:
         sys.stderr.write("recipe not found exiting.\n")
         sys.exit(2)
+
+    ret = _run_recipe(args, recipe_dict)
+    if ret == 0:
+        # TO DO
+        # register_installed_recipe(args, recipe_dict)
+        sys.stderr.write("installed " + args.recipe + "\n")
+    else:
+        sys.stderr.write("failure installing " + args.recipe + "\n")
+    sys.exit(ret)
 
 
 def list_recipes(args):

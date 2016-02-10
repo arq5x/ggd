@@ -1,0 +1,17 @@
+attributes:
+    name: t3
+    version: 1
+    sha1:
+        - 03cfd743661f07975fa2f1220c5194cbaff48451
+
+recipe:
+    make:
+        cmds:
+            - echo "abc" > a.${name}.${version}
+        outfiles:
+            - a.t3.1 # note, should use ${name}.${version} here, this is for testing
+
+        dependencies:
+            data:
+                - name: t2
+                  version: 1
