@@ -4,7 +4,16 @@ import os
 
 import yaml
 import hashlib
+import atexit
 
+def rm(path):
+    try: os.unlink(path)
+    except: pass
+
+def check_set_lock(path):
+    if os.path.exists(path):
+        raise Exception("ggd lock file: %s exists. Remove or wait for running process to finish.")
+    atexit.register(rm, path)
 
 def _get_config_data(config_path):
     if config_path is None:

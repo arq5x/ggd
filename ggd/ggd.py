@@ -8,12 +8,14 @@ import shutil
 import subprocess
 import sys
 import datetime
+import tempfile
 import urllib2
 import yaml
 from string import Template
 
 import utils
 
+LOCK_PATH = os.path.expanduser("~/.ggd.lock")
 
 recipe_urls = {
   "core": "https://raw.githubusercontent.com/arq5x/ggd-recipes/master/",
@@ -313,11 +315,17 @@ def main():
     # parse the args and call the selected function
     args = parser.parse_args()
 
+    # so we don't have multiple things running and writing data at the same
+    # time.
+    utils.check_set_lock(LOCK_PATH)
+
     try:
         args.func(args)
     except IOError, e:
         if e.errno != 32:  # ignore SIGPIPE
             raise
+    finally:
+        utils.rm(LOCK_PATH)
 
 if __name__ == "__main__":
 
