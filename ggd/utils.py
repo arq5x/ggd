@@ -12,7 +12,10 @@ def rm(path):
 
 def check_set_lock(path):
     if os.path.exists(path):
-        raise Exception("ggd lock file: %s exists. Remove or wait for running process to finish.")
+        raise Exception("ggd lock file: %s exists. Remove or wait for running \
+                process to finish." % path)
+    with open(path, "w") as fh:
+        fh.write("#")
     atexit.register(rm, path)
 
 def _get_config_data(config_path):
