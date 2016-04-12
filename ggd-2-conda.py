@@ -33,6 +33,7 @@ def convert_yaml(old, species, build, build_reqs=None, run_reqs=None):
 
     new = {'package': dict(name="{0}-{1}".format(build, old['attributes'].pop('name')),
                            version=str(old['attributes'].pop('version')).replace("-", "."))}
+    new['package']['name'] = new['package']['name'].lower()
     if len(old['attributes']) == 0:
         del old['attributes']
 
@@ -63,8 +64,8 @@ if __name__ == "__main__":
         s = io.StringIO(unicode(v))
         old = yaml.load(s)
 
-    name = old['attributes']['name']
-    new_dir = os.path.join("ggd-recipes", a.species, a.genome_build + "-" + name)
+    name = old['attributes']['name'].lower()
+    new_dir = os.path.join("ggd-recipes", a.species, (a.genome_build + "-" + name).lower())
     mkdir(new_dir)
 
 
@@ -87,11 +88,7 @@ if __name__ == "__main__":
     if xtra:
         new['about'] = {'summary': "\n".join(xtra)}
     if a.author:
-        if 'about' in new:
-            new['about']['author'] = a.author
-        else:
-            new['about'] = {'author': a.author}
-
+        new['extra'] = {"authors": a.author}
 
     with open("{new_dir}/meta.yaml".format(new_dir=new_dir), "w") as yfh:
         yaml.dump(new, yfh, default_flow_style=False)
