@@ -71,15 +71,19 @@ if __name__ == "__main__":
 
     recipe = old['recipe']['full']['recipe_cmds']
 
+    new = convert_yaml(old, a.species, a.genome_build)
+    work_dir = "$PREFIX/share/ggd/{species}/{genome_build}/{pkg_name}/".format(
+            species=a.species, genome_build=a.genome_build, pkg_name=new['package']['name'])
+
     script = "build" if a.use_build else "pre-link"
     with open("{new_dir}/{script}.sh".format(new_dir=new_dir, script=script), "w") as fh:
         fh.write("#!/bin/bash\n")
         fh.write("set -eo pipefail\n\n")
         fh.write("# converted from: {0}\n\n".format(a.yaml))
+        fh.write("mkdir -p {work_dir} && cd {work_dir}\n\n".format(work_dir=work_dir))
         fh.write("\n\n".join(recipe))
 
 
-    new = convert_yaml(old, a.species, a.genome_build)
 
     xtra = []
     for line in xopen(a.yaml):
