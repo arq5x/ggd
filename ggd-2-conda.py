@@ -98,4 +98,4 @@ if __name__ == "__main__":
         yaml.dump(new, yfh, default_flow_style=False)
         yfh.write("# to make a pre-built package, move pre-link.sh to build.sh\n")
         yfh.write("# and add source and fn here\n")
-        yfh.write("#source:\n    #url: http://example.com/ex.tgz\n    #fn: ex.tgz")
+        yfh.write("#source:\n    #url: http://example.com/ex.tgz\n    #fn: ex.tgz\n")
