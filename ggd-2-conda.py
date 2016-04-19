@@ -69,10 +69,13 @@ if __name__ == "__main__":
     mkdir(new_dir)
 
 
-    recipe = old['recipe']['full']['recipe_cmds']
+    recipe = "\n\n".join(old['recipe']['full']['recipe_cmds']) + "\n"
 
-    new = convert_yaml(old, a.species, a.genome_build)
-    work_dir = "$PREFIX/share/ggd/{species}/{genome_build}/{pkg_name}/".format(
+    look = {'tabix': 'htslib', 'bgzip': 'htslib', 'perl': 'perl', 'samtools': 'samtools', 'gzip': 'zlib'}
+    deps = sorted(set([look[prog] for prog in look if prog in recipe]))
+
+    new = convert_yaml(old, a.species, a.genome_build, build_reqs=deps[:], run_reqs=deps[:])
+    work_dir = "$PREFIX/share/ggd/{species}/{genome_build}/".format(
             species=a.species, genome_build=a.genome_build, pkg_name=new['package']['name'])
 
     script = "build" if a.use_build else "pre-link"
@@ -81,7 +84,7 @@ if __name__ == "__main__":
         fh.write("set -eo pipefail\n\n")
         fh.write("# converted from: {0}\n\n".format(a.yaml))
         fh.write("mkdir -p {work_dir} && cd {work_dir}\n\n".format(work_dir=work_dir))
-        fh.write("\n\n".join(recipe))
+        fh.write(recipe)
 
 
 
