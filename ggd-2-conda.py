@@ -65,7 +65,7 @@ if __name__ == "__main__":
         old = yaml.load(s)
 
     name = old['attributes']['name'].lower()
-    new_dir = os.path.join("ggd-recipes", a.species, (a.genome_build + "-" + name).lower())
+    new_dir = os.path.join("ggd-recipes", a.species, a.genome_build, (a.genome_build + "-" + name).lower())
     mkdir(new_dir)
 
 
@@ -86,8 +86,6 @@ if __name__ == "__main__":
         fh.write("mkdir -p {work_dir} && cd {work_dir}\n\n".format(work_dir=work_dir))
         fh.write(recipe)
 
-
-
     xtra = []
     for line in xopen(a.yaml):
         if line[0] != "#" and line.strip(): break
@@ -96,6 +94,10 @@ if __name__ == "__main__":
         new['about'] = {'summary': "\n".join(xtra)}
     if a.author:
         new['extra'] = {"authors": a.author}
+    else:
+        new['extra'] = {}
+    new['extra']['genome-build'] = a.genome_build
+    new['extra']['species'] = a.species
 
     with open("{new_dir}/meta.yaml".format(new_dir=new_dir), "w") as yfh:
         yaml.dump(new, yfh, default_flow_style=False)
