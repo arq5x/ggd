@@ -73,6 +73,10 @@ if __name__ == "__main__":
 
     look = {'tabix': 'htslib', 'bgzip': 'htslib', 'perl': 'perl', 'samtools': 'samtools', 'gzip': 'zlib'}
     deps = sorted(set([look[prog] for prog in look if prog in recipe]))
+    if '| bgzip' in recipe:
+        gf = 'https://raw.githubusercontent.com/gogetdata/ggd-recipes/dev/genomes/{build}/{build}.genome'.format(build=a.genome_build)
+        recipe = recipe.replace('| bgzip', '| gsort /dev/stdin {gf} | bgzip'.format(gf=gf))
+        deps = sorted(deps + ['gsort'])
 
     new = convert_yaml(old, a.species, a.genome_build, build_reqs=deps[:], run_reqs=deps[:])
     work_dir = "$PREFIX/share/ggd/{species}/{genome_build}/".format(
